@@ -5,6 +5,7 @@ import { useAuction } from "@/context/AuctionContext";
 import { PlayerCard } from "@/components/PlayerCard";
 import { CountdownTimer } from "@/components/CountdownTimer";
 import { BidControls } from "@/components/BidControls";
+import { UpcomingQueueShowcase } from "@/components/UpcomingQueueShowcase";
 import { formatPKR } from "@/lib/rules";
 import {
   Gavel,
@@ -319,6 +320,9 @@ export default function LiveAuctionArenaPage() {
           </div>
         </div>
       </div>
+
+      {/* Upcoming Player Queue with Kit Pictures & PSL / T20 Stats */}
+      <UpcomingQueueShowcase />
 
       {/* Admin Bottom Auction Controller Bar */}
       {role === "admin" && (

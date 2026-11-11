@@ -3,7 +3,7 @@
 import React from "react";
 import { Player } from "@/types/auction";
 import { formatPKR } from "@/lib/rules";
-import { Globe, UserCheck, Shield, Award, Flame, Activity } from "lucide-react";
+import { Globe, UserCheck, Shield, Award, Flame, Activity, Shirt, Sparkles } from "lucide-react";
 
 interface PlayerCardProps {
   player: Player | null;
@@ -23,7 +23,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
       <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 text-center text-slate-500 flex flex-col items-center justify-center min-h-[350px]">
         <Shield className="w-12 h-12 text-slate-700 mb-3 animate-pulse" />
         <p className="text-base font-semibold">No Player Currently on Block</p>
-        <p className="text-xs text-slate-600 mt-1">Select an upcoming player from the list or start the auction.</p>
+        <p className="text-xs text-slate-600 mt-1">Select an upcoming player from the queue or start the auction.</p>
       </div>
     );
   }
@@ -74,13 +74,12 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
     <div
       className={`relative overflow-hidden rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl transition-all duration-300 ${catStyle.glow}`}
     >
-      {/* Top Banner with Category Glow */}
       <div className="absolute -top-24 -right-24 w-60 h-60 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-24 -left-24 w-60 h-60 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header Badges */}
       <div className="p-4 sm:p-6 pb-2 flex items-center justify-between gap-2 border-b border-slate-800/80">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span
             className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${catStyle.bg} ${catStyle.text} ${catStyle.border} shadow-sm`}
           >
@@ -89,6 +88,14 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">
             {player.primaryRole}
           </span>
+
+          {/* Under-23 Tag */}
+          {player.isUnder23 && player.isUncapped && (
+            <span className="px-2.5 py-1 rounded-full text-xs font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+              ★ Uncapped U-23
+            </span>
+          )}
+
           {player.auctionRound && player.auctionRound > 1 && (
             <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
               Round 2 (Re-Auction)
@@ -103,7 +110,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
             </span>
           ) : (
             <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">
-              <UserCheck className="w-3.5 h-3.5" /> Local (Pakistan)
+              <UserCheck className="w-3.5 h-3.5" /> Domestic (Pakistan)
             </span>
           )}
         </div>
@@ -111,20 +118,42 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
 
       {/* Main Player Visual & Bio */}
       <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-        {/* Photo Container */}
+        {/* Photo Container with Kit Badge */}
         <div className="md:col-span-5 flex flex-col items-center">
-          <div className="relative w-44 h-44 sm:w-52 sm:h-52 rounded-2xl overflow-hidden border-2 border-slate-700 shadow-2xl bg-slate-950 group">
+          <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-2xl overflow-hidden border-2 border-slate-700 shadow-2xl bg-slate-950 group">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={player.photoUrl}
               alt={player.name}
               className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
-            <div className="absolute bottom-2 left-2 right-2 text-center">
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-90" />
+
+            {/* Team Kit Badge Indicator */}
+            <div className="absolute top-2 left-2 right-2">
+              <span
+                className={`flex items-center justify-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black tracking-wider uppercase backdrop-blur-md border shadow ${
+                  player.hasPlayedPSL
+                    ? "bg-amber-500/30 text-amber-300 border-amber-500/50"
+                    : "bg-blue-500/30 text-blue-300 border-blue-500/50"
+                }`}
+              >
+                <Shirt className="w-3 h-3" />
+                {player.hasPlayedPSL
+                  ? `PSL Kit: ${player.lastPSLTeam || "Previous Franchise"}`
+                  : "T20 International / League Kit"}
+              </span>
+            </div>
+
+            <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-center px-1">
               <span className="text-[11px] font-semibold text-slate-300 bg-slate-950/80 px-2 py-0.5 rounded-full border border-slate-800">
                 Age: {player.age} yrs
               </span>
+              {player.kitDescription && (
+                <span className="text-[10px] font-medium text-slate-400 bg-slate-950/80 px-2 py-0.5 rounded-full border border-slate-800 truncate max-w-[130px]">
+                  {player.kitDescription}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -167,46 +196,81 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
             </div>
           </div>
 
-          {/* Career Stats Pills */}
+          {/* PSL Career Stats vs T20 Career Stats Showcase */}
           {player.stats && (
-            <div className="bg-slate-950/50 rounded-2xl p-3 border border-slate-800/60">
-              <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                <Activity className="w-3.5 h-3.5 text-emerald-400" />
-                <span>PSL Career Highlights</span>
+            <div className="bg-slate-950/70 rounded-2xl p-3.5 border border-slate-800/80">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                  <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>
+                    {player.statsType === "PSL"
+                      ? "Official PSL Career Highlights"
+                      : "Overall T20 / International Highlights"}
+                  </span>
+                </div>
+                <span
+                  className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
+                    player.statsType === "PSL"
+                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                      : "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                  }`}
+                >
+                  {player.statsType === "PSL" ? "PSL Stats" : "T20 Stats"}
+                </span>
               </div>
+
               <div className="grid grid-cols-4 gap-2 text-center text-xs">
                 <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
                   <span className="block text-[10px] text-slate-500 font-semibold">Matches</span>
                   <span className="font-bold text-white">{player.stats.matches}</span>
                 </div>
+
                 {player.stats.runs !== undefined && (
                   <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
                     <span className="block text-[10px] text-slate-500 font-semibold">Runs</span>
                     <span className="font-bold text-emerald-400">{player.stats.runs}</span>
                   </div>
                 )}
+
                 {player.stats.strikeRate !== undefined && (
                   <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
                     <span className="block text-[10px] text-slate-500 font-semibold">Strike Rate</span>
                     <span className="font-bold text-amber-400">{player.stats.strikeRate}</span>
                   </div>
                 )}
+
+                {player.stats.battingAverage !== undefined && (
+                  <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
+                    <span className="block text-[10px] text-slate-500 font-semibold">Average</span>
+                    <span className="font-bold text-cyan-400">{player.stats.battingAverage}</span>
+                  </div>
+                )}
+
+                {player.stats.highestScore !== undefined && (
+                  <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
+                    <span className="block text-[10px] text-slate-500 font-semibold">Highest</span>
+                    <span className="font-bold text-purple-400">{player.stats.highestScore}</span>
+                  </div>
+                )}
+
                 {player.stats.wickets !== undefined && (
                   <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
                     <span className="block text-[10px] text-slate-500 font-semibold">Wickets</span>
                     <span className="font-bold text-cyan-400">{player.stats.wickets}</span>
                   </div>
                 )}
+
                 {player.stats.economyRate !== undefined && (
                   <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
                     <span className="block text-[10px] text-slate-500 font-semibold">Economy</span>
                     <span className="font-bold text-teal-400">{player.stats.economyRate}</span>
                   </div>
                 )}
-                {player.stats.catches !== undefined && (
+
+                {player.stats.bestBowling !== undefined && (
                   <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
-                    <span className="block text-[10px] text-slate-500 font-semibold">Catches</span>
-                    <span className="font-bold text-indigo-400">{player.stats.catches}</span>
+                    <span className="block text-[10px] text-slate-500 font-semibold">Best</span>
+                    <span className="font-bold text-indigo-400">{player.stats.bestBowling}</span>
                   </div>
                 )}
               </div>
@@ -217,4 +281,3 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
     </div>
   );
 };
-

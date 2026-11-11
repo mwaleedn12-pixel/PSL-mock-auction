@@ -1,7 +1,7 @@
 import { Player } from "@/types/auction";
 
 export const INITIAL_PLAYERS: Player[] = [
-  // --- BRACKET 1: PKR 4.2 Crore (Platinum Base) ---
+  // --- PLATINUM (Base: 4.2 Crore) ---
   {
     id: "p1",
     name: "Babar Azam",
@@ -19,7 +19,20 @@ export const INITIAL_PLAYERS: Player[] = [
     auctionRound: 1,
     isUnder23: false,
     isUncapped: false,
-    stats: { matches: 90, runs: 3504, battingAverage: 44.3, strikeRate: 132.8 }
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Peshawar Zalmi",
+    kitDescription: "Official Peshawar Zalmi Yellow Kit",
+    stats: {
+      matches: 90,
+      runs: 3504,
+      battingAverage: 44.3,
+      strikeRate: 132.8,
+      highestScore: "115",
+      hundreds: 2,
+      fifties: 33,
+      catches: 42,
+    }
   },
   {
     id: "p2",
@@ -38,7 +51,20 @@ export const INITIAL_PLAYERS: Player[] = [
     auctionRound: 1,
     isUnder23: false,
     isUncapped: false,
-    stats: { matches: 72, wickets: 104, bowlingAverage: 20.8, economyRate: 7.9 }
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Lahore Qalandars",
+    kitDescription: "Official Lahore Qalandars Green Kit",
+    stats: {
+      matches: 72,
+      wickets: 104,
+      bowlingAverage: 20.8,
+      economyRate: 7.9,
+      bestBowling: "5/4",
+      runs: 480,
+      strikeRate: 148.5,
+      catches: 28,
+    }
   },
   {
     id: "p3",
@@ -57,7 +83,21 @@ export const INITIAL_PLAYERS: Player[] = [
     auctionRound: 1,
     isUnder23: false,
     isUncapped: false,
-    stats: { matches: 81, runs: 3012, battingAverage: 43.6, strikeRate: 129.5, catches: 52, stumpings: 18 }
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Multan Sultans",
+    kitDescription: "Official Multan Sultans Green/Blue Kit",
+    stats: {
+      matches: 81,
+      runs: 3012,
+      battingAverage: 43.6,
+      strikeRate: 129.5,
+      highestScore: "110*",
+      hundreds: 1,
+      fifties: 26,
+      catches: 52,
+      stumpings: 18,
+    }
   },
   {
     id: "p4",
@@ -77,7 +117,19 @@ export const INITIAL_PLAYERS: Player[] = [
     auctionRound: 1,
     isUnder23: false,
     isUncapped: false,
-    stats: { matches: 42, wickets: 61, bowlingAverage: 17.5, economyRate: 6.2 }
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Lahore Qalandars",
+    kitDescription: "Official Lahore Qalandars Green Kit",
+    stats: {
+      matches: 42,
+      wickets: 61,
+      bowlingAverage: 17.5,
+      economyRate: 6.2,
+      bestBowling: "5/20",
+      runs: 220,
+      strikeRate: 165.2,
+    }
   },
   {
     id: "p5",
@@ -95,12 +147,24 @@ export const INITIAL_PLAYERS: Player[] = [
     status: "upcoming",
     auctionRound: 1,
     isUnder23: true,
-    isUncapped: false, // Capped international
-    stats: { matches: 45, wickets: 58, bowlingAverage: 22.4, economyRate: 7.6 }
+    isUncapped: false,
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Islamabad United",
+    kitDescription: "Official Islamabad United Red Kit",
+    stats: {
+      matches: 45,
+      wickets: 58,
+      bowlingAverage: 22.4,
+      economyRate: 7.6,
+      bestBowling: "5/20",
+      runs: 140,
+      strikeRate: 135.0,
+    }
   },
   {
     id: "p6",
-    name: "David Miller",
+    name: "David Miller (Killer Miller)",
     photoUrl: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&auto=format&fit=crop&q=80",
     nationality: "South Africa",
     isOverseas: true,
@@ -115,10 +179,21 @@ export const INITIAL_PLAYERS: Player[] = [
     auctionRound: 1,
     isUnder23: false,
     isUncapped: false,
-    stats: { matches: 28, runs: 680, battingAverage: 37.8, strikeRate: 148.5 }
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Multan Sultans",
+    kitDescription: "Official Multan Sultans Green/Blue Kit",
+    stats: {
+      matches: 28,
+      runs: 680,
+      battingAverage: 37.8,
+      strikeRate: 148.5,
+      highestScore: "73*",
+      fifties: 5,
+    }
   },
 
-  // --- BRACKET 2: PKR 2.2 Crore (Diamond Base) ---
+  // --- DIAMOND (Base: 2.2 Crore) ---
   {
     id: "p7",
     name: "Shadab Khan",
@@ -130,13 +205,26 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Right-arm legbreak",
     primaryRole: "All-Rounder",
     category: "Diamond",
-    basePrice: 22000000, // 2.2 Crore
+    basePrice: 22000000,
     currentPrice: 22000000,
     status: "upcoming",
     auctionRound: 1,
     isUnder23: false,
     isUncapped: false,
-    stats: { matches: 78, runs: 1250, wickets: 85, battingAverage: 24.5, strikeRate: 141.2 }
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Islamabad United",
+    kitDescription: "Official Islamabad United Red/Gold Kit",
+    stats: {
+      matches: 78,
+      runs: 1250,
+      wickets: 85,
+      battingAverage: 24.5,
+      strikeRate: 141.2,
+      bowlingAverage: 22.8,
+      economyRate: 7.5,
+      fifties: 8,
+    }
   },
   {
     id: "p8",
@@ -155,7 +243,19 @@ export const INITIAL_PLAYERS: Player[] = [
     auctionRound: 1,
     isUnder23: false,
     isUncapped: false,
-    stats: { matches: 84, runs: 2680, battingAverage: 31.9, strikeRate: 142.1 }
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Lahore Qalandars",
+    kitDescription: "Official Lahore Qalandars Green Kit",
+    stats: {
+      matches: 84,
+      runs: 2680,
+      battingAverage: 31.9,
+      strikeRate: 142.1,
+      highestScore: "115",
+      hundreds: 2,
+      fifties: 20,
+    }
   },
   {
     id: "p9",
@@ -174,17 +274,28 @@ export const INITIAL_PLAYERS: Player[] = [
     auctionRound: 1,
     isUnder23: false,
     isUncapped: false,
-    stats: { matches: 62, wickets: 88, bowlingAverage: 21.6, economyRate: 8.4 }
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Lahore Qalandars",
+    kitDescription: "Official Lahore Qalandars Green/Black Kit",
+    stats: {
+      matches: 62,
+      wickets: 88,
+      bowlingAverage: 21.6,
+      economyRate: 8.4,
+      bestBowling: "4/23",
+      catches: 18,
+    }
   },
   {
     id: "p10",
-    name: "Alex Hales",
+    name: "Finn Allen",
     photoUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&auto=format&fit=crop&q=80",
-    nationality: "England",
+    nationality: "New Zealand",
     isOverseas: true,
-    age: 36,
+    age: 25,
     battingStyle: "Right-hand bat",
-    bowlingStyle: "Right-arm medium",
+    bowlingStyle: "Right-arm offbreak",
     primaryRole: "Batter",
     category: "Diamond",
     basePrice: 22000000,
@@ -193,7 +304,18 @@ export const INITIAL_PLAYERS: Player[] = [
     auctionRound: 1,
     isUnder23: false,
     isUncapped: false,
-    stats: { matches: 45, runs: 1420, battingAverage: 33.0, strikeRate: 149.6 }
+    hasPlayedPSL: false, // New PSL Debutant!
+    statsType: "T20", // T20 Career Stats!
+    kitDescription: "New Zealand International Blackcaps T20 Kit",
+    stats: {
+      matches: 88,
+      runs: 2540,
+      battingAverage: 29.8,
+      strikeRate: 168.4,
+      highestScore: "137",
+      hundreds: 3,
+      fifties: 16,
+    }
   },
   {
     id: "p11",
@@ -212,10 +334,22 @@ export const INITIAL_PLAYERS: Player[] = [
     auctionRound: 1,
     isUnder23: false,
     isUncapped: false,
-    stats: { matches: 34, runs: 590, wickets: 28, battingAverage: 25.6, strikeRate: 144.2 }
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Lahore Qalandars",
+    kitDescription: "Official Lahore Qalandars Green Kit",
+    stats: {
+      matches: 34,
+      runs: 590,
+      wickets: 28,
+      battingAverage: 25.6,
+      strikeRate: 144.2,
+      bowlingAverage: 24.5,
+      economyRate: 7.8,
+    }
   },
 
-  // --- BRACKET 3: PKR 1.1 Crore (Gold Base) ---
+  // --- GOLD (Base: 1.1 Crore) ---
   {
     id: "p12",
     name: "Saim Ayub",
@@ -227,13 +361,24 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Right-arm offbreak",
     primaryRole: "Batter",
     category: "Gold",
-    basePrice: 11000000, // 1.1 Crore
+    basePrice: 11000000,
     currentPrice: 11000000,
     status: "upcoming",
     auctionRound: 1,
     isUnder23: true,
     isUncapped: false,
-    stats: { matches: 30, runs: 850, battingAverage: 29.3, strikeRate: 154.2 }
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Peshawar Zalmi",
+    kitDescription: "Official Peshawar Zalmi Yellow/Black Kit",
+    stats: {
+      matches: 30,
+      runs: 850,
+      battingAverage: 29.3,
+      strikeRate: 154.2,
+      highestScore: "88",
+      fifties: 7,
+    }
   },
   {
     id: "p13",
@@ -252,7 +397,18 @@ export const INITIAL_PLAYERS: Player[] = [
     auctionRound: 1,
     isUnder23: false,
     isUncapped: false,
-    stats: { matches: 25, runs: 340, wickets: 29, battingAverage: 21.2, strikeRate: 162.0 }
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Peshawar Zalmi",
+    kitDescription: "Official Peshawar Zalmi Yellow Kit",
+    stats: {
+      matches: 25,
+      runs: 340,
+      wickets: 29,
+      battingAverage: 21.2,
+      strikeRate: 162.0,
+      economyRate: 8.9,
+    }
   },
   {
     id: "p14",
@@ -271,7 +427,19 @@ export const INITIAL_PLAYERS: Player[] = [
     auctionRound: 1,
     isUnder23: false,
     isUncapped: false,
-    stats: { matches: 58, runs: 1650, battingAverage: 33.6, strikeRate: 152.0 }
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Quetta Gladiators",
+    kitDescription: "Official Quetta Gladiators Purple/Gold Kit",
+    stats: {
+      matches: 58,
+      runs: 1650,
+      battingAverage: 33.6,
+      strikeRate: 152.0,
+      highestScore: "100*",
+      hundreds: 2,
+      fifties: 10,
+    }
   },
   {
     id: "p15",
@@ -290,10 +458,20 @@ export const INITIAL_PLAYERS: Player[] = [
     auctionRound: 1,
     isUnder23: false,
     isUncapped: false,
-    stats: { matches: 36, wickets: 48, bowlingAverage: 20.1, economyRate: 7.8 }
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Multan Sultans",
+    kitDescription: "Official Multan Sultans Green Kit",
+    stats: {
+      matches: 36,
+      wickets: 48,
+      bowlingAverage: 20.1,
+      economyRate: 7.8,
+      bestBowling: "6/40",
+    }
   },
 
-  // --- BRACKET 4: PKR 60 Lakh (Silver & Emerging Share 60L Base) ---
+  // --- SILVER & EMERGING (Base: 60 Lakh) ---
   {
     id: "p16",
     name: "Mohammad Haris",
@@ -311,7 +489,19 @@ export const INITIAL_PLAYERS: Player[] = [
     auctionRound: 1,
     isUnder23: true,
     isUncapped: false,
-    stats: { matches: 28, runs: 650, battingAverage: 25.0, strikeRate: 165.5, catches: 14 }
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Peshawar Zalmi",
+    kitDescription: "Official Peshawar Zalmi Yellow Kit",
+    stats: {
+      matches: 28,
+      runs: 650,
+      battingAverage: 25.0,
+      strikeRate: 165.5,
+      highestScore: "85",
+      fifties: 4,
+      catches: 14,
+    }
   },
   {
     id: "p17",
@@ -321,7 +511,7 @@ export const INITIAL_PLAYERS: Player[] = [
     isOverseas: false,
     age: 23,
     battingStyle: "Right-hand bat",
-    bowlingStyle: "Right-arm fast",
+    bowlingStyle: "Right-arm fast (slinger)",
     primaryRole: "Bowler",
     category: "Silver",
     basePrice: 6000000,
@@ -330,10 +520,20 @@ export const INITIAL_PLAYERS: Player[] = [
     auctionRound: 1,
     isUnder23: true,
     isUncapped: false,
-    stats: { matches: 32, wickets: 40, bowlingAverage: 21.0, economyRate: 8.1 }
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Lahore Qalandars",
+    kitDescription: "Official Lahore Qalandars Green Kit",
+    stats: {
+      matches: 32,
+      wickets: 40,
+      bowlingAverage: 21.0,
+      economyRate: 8.1,
+      bestBowling: "4/16",
+    }
   },
 
-  // --- UNCAPPED UNDER-23 STARS (Section 7 Compliance) ---
+  // --- UNCAPPED UNDER-23 PLAYERS (Section 7) ---
   {
     id: "p18",
     name: "Mehran Mumtaz",
@@ -345,13 +545,23 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Slow left-arm orthodox",
     primaryRole: "Bowler",
     category: "Emerging",
-    basePrice: 6000000, // 60 Lakh
+    basePrice: 6000000,
     currentPrice: 6000000,
     status: "upcoming",
     auctionRound: 1,
     isUnder23: true,
-    isUncapped: true, // Uncapped Under-23!
-    stats: { matches: 12, wickets: 15, bowlingAverage: 19.8, economyRate: 6.9 }
+    isUncapped: true,
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Rawalpindi / Islamabad",
+    kitDescription: "Official Rawalpindi Regional T20 Kit",
+    stats: {
+      matches: 12,
+      wickets: 15,
+      bowlingAverage: 19.8,
+      economyRate: 6.9,
+      bestBowling: "3/22",
+    }
   },
   {
     id: "p19",
@@ -369,8 +579,18 @@ export const INITIAL_PLAYERS: Player[] = [
     status: "upcoming",
     auctionRound: 1,
     isUnder23: true,
-    isUncapped: true, // Uncapped Under-23!
-    stats: { matches: 8, wickets: 11, bowlingAverage: 22.0, economyRate: 7.8 }
+    isUncapped: true,
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Peshawar Zalmi",
+    kitDescription: "Official Peshawar Zalmi Black/Gold Kit",
+    stats: {
+      matches: 8,
+      wickets: 11,
+      bowlingAverage: 22.0,
+      economyRate: 7.8,
+      bestBowling: "3/28",
+    }
   },
   {
     id: "p20",
@@ -388,8 +608,20 @@ export const INITIAL_PLAYERS: Player[] = [
     status: "upcoming",
     auctionRound: 1,
     isUnder23: true,
-    isUncapped: true, // Uncapped Under-23!
-    stats: { matches: 15, runs: 320, battingAverage: 24.6, strikeRate: 134.2, catches: 10 }
+    isUncapped: true,
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Peshawar Zalmi",
+    kitDescription: "Official Peshawar Zalmi Yellow Kit",
+    stats: {
+      matches: 15,
+      runs: 320,
+      battingAverage: 24.6,
+      strikeRate: 134.2,
+      highestScore: "50",
+      fifties: 2,
+      catches: 10,
+    }
   },
   {
     id: "p21",
@@ -407,8 +639,18 @@ export const INITIAL_PLAYERS: Player[] = [
     status: "upcoming",
     auctionRound: 1,
     isUnder23: true,
-    isUncapped: true, // Uncapped Under-23!
-    stats: { matches: 10, runs: 240, battingAverage: 26.6, strikeRate: 145.0 }
+    isUncapped: true,
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Multan Sultans",
+    kitDescription: "Official Multan Sultans Blue/Green Kit",
+    stats: {
+      matches: 10,
+      runs: 240,
+      battingAverage: 26.6,
+      strikeRate: 145.0,
+      highestScore: "46",
+    }
   },
   {
     id: "p22",
@@ -426,8 +668,17 @@ export const INITIAL_PLAYERS: Player[] = [
     status: "upcoming",
     auctionRound: 1,
     isUnder23: true,
-    isUncapped: true, // Uncapped Under-23!
-    stats: { matches: 6, wickets: 8, bowlingAverage: 21.5, economyRate: 7.2 }
+    isUncapped: true,
+    hasPlayedPSL: false, // PSL Debutant!
+    statsType: "T20", // Domestic T20 Stats
+    kitDescription: "Pakistan Under-19 National Green Kit",
+    stats: {
+      matches: 14,
+      wickets: 18,
+      bowlingAverage: 18.2,
+      economyRate: 6.4,
+      bestBowling: "4/19",
+    }
   },
   {
     id: "p23",
@@ -445,8 +696,18 @@ export const INITIAL_PLAYERS: Player[] = [
     status: "upcoming",
     auctionRound: 1,
     isUnder23: true,
-    isUncapped: true, // Uncapped Under-23!
-    stats: { matches: 9, wickets: 12, bowlingAverage: 23.1, economyRate: 8.6 }
+    isUncapped: true,
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Islamabad United",
+    kitDescription: "Official Islamabad United Red Kit",
+    stats: {
+      matches: 9,
+      wickets: 12,
+      bowlingAverage: 23.1,
+      economyRate: 8.6,
+      bestBowling: "3/30",
+    }
   },
   {
     id: "p24",
@@ -465,7 +726,19 @@ export const INITIAL_PLAYERS: Player[] = [
     auctionRound: 1,
     isUnder23: false,
     isUncapped: false,
-    stats: { matches: 16, runs: 410, battingAverage: 31.5, strikeRate: 136.6, catches: 8 }
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Lahore Qalandars",
+    kitDescription: "Official Lahore Qalandars Green Kit",
+    stats: {
+      matches: 16,
+      runs: 410,
+      battingAverage: 31.5,
+      strikeRate: 136.6,
+      highestScore: "71*",
+      fifties: 3,
+      catches: 8,
+    }
   },
   {
     id: "p25",
@@ -484,6 +757,17 @@ export const INITIAL_PLAYERS: Player[] = [
     auctionRound: 1,
     isUnder23: false,
     isUncapped: false,
-    stats: { matches: 20, runs: 480, battingAverage: 36.9, strikeRate: 172.5 }
+    hasPlayedPSL: true,
+    statsType: "PSL",
+    lastPSLTeam: "Multan Sultans",
+    kitDescription: "Official Multan Sultans Green/Blue Kit",
+    stats: {
+      matches: 20,
+      runs: 480,
+      battingAverage: 36.9,
+      strikeRate: 172.5,
+      highestScore: "71",
+      fifties: 3,
+    }
   }
 ];

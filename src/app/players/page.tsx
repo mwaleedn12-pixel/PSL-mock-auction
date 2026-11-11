@@ -149,6 +149,8 @@ export default function PlayerCentrePage() {
       auctionRound: 1,
       isUnder23: r.age <= 23,
       isUncapped: !r.isOverseas && r.age <= 23,
+      hasPlayedPSL: false,
+      statsType: "T20",
     }));
 
     importPlayersList(newPlayers);

@@ -15,9 +15,13 @@ export interface PlayerStats {
   runs?: number;
   battingAverage?: number;
   strikeRate?: number;
+  highestScore?: string | number;
+  hundreds?: number;
+  fifties?: number;
   wickets?: number;
   bowlingAverage?: number;
   economyRate?: number;
+  bestBowling?: string;
   catches?: number;
   stumpings?: number;
 }
@@ -46,6 +50,11 @@ export interface Player {
   // PSL Rule requirement: Uncapped Under-23 status
   isUnder23?: boolean;
   isUncapped?: boolean;
+  // User Requirement: PSL Kit & PSL vs T20 stats tracking
+  hasPlayedPSL?: boolean;
+  statsType?: 'PSL' | 'T20';
+  lastPSLTeam?: string;
+  kitDescription?: string;
 }
 
 export interface Franchise {
@@ -57,17 +66,16 @@ export interface Franchise {
   primaryColor: string;
   secondaryColor: string;
   ownerName: string;
-  initialPurse: number; // standard 45 Cr (450,000,000)
+  initialPurse: number;
   remainingPurse: number;
   squadCount: number;
-  minSquadSize: number; // 16
-  maxSquadSize: number; // 20
-  minOverseas: number; // 5
-  maxOverseas: number; // 7 (depends on squad size)
+  minSquadSize: number;
+  maxSquadSize: number;
+  minOverseas: number;
+  maxOverseas: number;
   playingXI?: string[];
   captainId?: string;
   viceCaptainId?: string;
-  // Private authentication passkey for Team Owner
   privatePasskey: string;
 }
 
@@ -87,21 +95,21 @@ export interface AuctionSettings {
   season: string;
   rulePreset: RulePreset;
   currency: string;
-  totalPursePerTeam: number; // 450,000,000 (45 Cr)
-  maxQualifyingPurse: number; // 505,000,000 (50.5 Cr)
-  minSpendRequirement: number; // 365,000,000 (36.5 Cr)
-  minSquadSize: number; // 16
-  maxSquadSize: number; // 20
-  minOverseasPlayingXI: number; // 3
-  maxOverseasPlayingXI: number; // 4
-  minUncappedU23Squad: number; // 2
-  minUncappedU23PlayingXI: number; // 1
-  maxRetentions: number; // 4
-  maxDirectForeignSignings: number; // 1
-  defaultTimerSeconds: number; // 30s opening
-  timerResetSeconds: number; // 15s reset on bid
-  extensionSeconds: number; // 10s extension
-  extensionTriggerSeconds: number; // in final 5 seconds
+  totalPursePerTeam: number;
+  maxQualifyingPurse: number;
+  minSpendRequirement: number;
+  minSquadSize: number;
+  maxSquadSize: number;
+  minOverseasPlayingXI: number;
+  maxOverseasPlayingXI: number;
+  minUncappedU23Squad: number;
+  minUncappedU23PlayingXI: number;
+  maxRetentions: number;
+  maxDirectForeignSignings: number;
+  defaultTimerSeconds: number;
+  timerResetSeconds: number;
+  extensionSeconds: number;
+  extensionTriggerSeconds: number;
   autoSellOnAllOut: boolean;
   soundEffectsEnabled: boolean;
   voiceAnnouncements: boolean;
