@@ -235,3 +235,4 @@ export const UpcomingQueueShowcase: React.FC = () => {
     </div>
   );
 };
+
