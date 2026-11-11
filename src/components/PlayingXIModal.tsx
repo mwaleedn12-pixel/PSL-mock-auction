@@ -2,8 +2,8 @@
 
 import React, { useState } from "react";
 import { Franchise, Player } from "@/types/auction";
-import { formatPKR } from "@/lib/rules";
-import { Shield, Check, X, AlertCircle, Award, Crown, Star } from "lucide-react";
+import { formatPKR, validatePlayingXI } from "@/lib/rules";
+import { Shield, Check, X, AlertCircle, Award, Sparkles, UserCheck } from "lucide-react";
 
 interface PlayingXIModalProps {
   franchise: Franchise;
@@ -25,19 +25,19 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
   const [selectedIds, setSelectedIds] = useState<string[]>(franchise.playingXI || []);
   const [captainId, setCaptainId] = useState<string | undefined>(franchise.captainId);
   const [viceCaptainId, setViceCaptainId] = useState<string | undefined>(franchise.viceCaptainId);
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   if (!isOpen) return null;
 
   const toggleSelectPlayer = (playerId: string) => {
-    setValidationError(null);
+    setValidationErrors([]);
     if (selectedIds.includes(playerId)) {
       setSelectedIds(selectedIds.filter((id) => id !== playerId));
       if (captainId === playerId) setCaptainId(undefined);
       if (viceCaptainId === playerId) setViceCaptainId(undefined);
     } else {
       if (selectedIds.length >= 11) {
-        setValidationError("Playing XI is full! You can only select exactly 11 players.");
+        setValidationErrors(["Playing XI is full! You can only select exactly 11 players."]);
         return;
       }
       setSelectedIds([...selectedIds, playerId]);
@@ -46,14 +46,13 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
 
   const selectedPlayers = squad.filter((p) => selectedIds.includes(p.id));
   const overseasCount = selectedPlayers.filter((p) => p.isOverseas).length;
+  const u23UncappedCount = selectedPlayers.filter((p) => p.isUnder23 && p.isUncapped).length;
+  const squadU23UncappedTotal = squad.filter((p) => p.isUnder23 && p.isUncapped).length;
 
   const handleSave = () => {
-    if (selectedIds.length !== 11) {
-      setValidationError(`Please select exactly 11 players (currently ${selectedIds.length} selected).`);
-      return;
-    }
-    if (overseasCount > 4) {
-      setValidationError(`Maximum 4 overseas players allowed in Playing XI (currently ${overseasCount} selected).`);
+    const validation = validatePlayingXI(selectedPlayers);
+    if (!validation.valid) {
+      setValidationErrors(validation.errors);
       return;
     }
     onSave(selectedIds, captainId, viceCaptainId);
@@ -74,7 +73,9 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
             </div>
             <div>
               <h3 className="text-xl font-black text-white">{franchise.name} - Playing XI Builder</h3>
-              <p className="text-xs text-slate-400">Select 11 players, Captain (C), and Vice-Captain (VC)</p>
+              <p className="text-xs text-slate-400">
+                PSL Rules Enforced: 3-4 Overseas, at least 1 Uncapped Under-23 player, Captain & VC.
+              </p>
             </div>
           </div>
           <button
@@ -85,44 +86,58 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
           </button>
         </div>
 
-        {/* Status Metrics */}
-        <div className="grid grid-cols-3 gap-3 my-4">
+        {/* PSL Rule Metrics Badges */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 my-4">
           <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
-            <span className="text-[11px] text-slate-400 block">Selected Players</span>
+            <span className="text-[11px] text-slate-400 block">Total Players</span>
             <span className={`text-lg font-black ${selectedIds.length === 11 ? "text-emerald-400" : "text-amber-400"}`}>
               {selectedIds.length} / 11
             </span>
           </div>
+
           <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
-            <span className="text-[11px] text-slate-400 block">Overseas Limit (Max 4)</span>
-            <span className={`text-lg font-black ${overseasCount > 4 ? "text-red-400" : "text-blue-400"}`}>
-              {overseasCount} / 4
+            <span className="text-[11px] text-slate-400 block">Overseas (3 to 4)</span>
+            <span
+              className={`text-lg font-black ${
+                overseasCount >= 3 && overseasCount <= 4 ? "text-emerald-400" : "text-amber-400"
+              }`}
+            >
+              {overseasCount} OS
             </span>
           </div>
+
           <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
-            <span className="text-[11px] text-slate-400 block">Leadership</span>
-            <span className="text-xs font-bold text-slate-300">
-              {captainId ? `C: ${squad.find(p => p.id === captainId)?.name.split(" ")[0]}` : "No Captain"} |{" "}
-              {viceCaptainId ? `VC: ${squad.find(p => p.id === viceCaptainId)?.name.split(" ")[0]}` : "No VC"}
+            <span className="text-[11px] text-slate-400 block">Uncapped U-23 in XI (Min 1)</span>
+            <span className={`text-lg font-black ${u23UncappedCount >= 1 ? "text-emerald-400" : "text-red-400"}`}>
+              {u23UncappedCount} / 1 min
+            </span>
+          </div>
+
+          <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
+            <span className="text-[11px] text-slate-400 block">Squad U-23 Total (Min 2)</span>
+            <span className={`text-lg font-black ${squadU23UncappedTotal >= 2 ? "text-emerald-400" : "text-amber-400"}`}>
+              {squadU23UncappedTotal} / 2 min
             </span>
           </div>
         </div>
 
-        {validationError && (
-          <div className="p-3 mb-4 rounded-xl bg-red-950/60 border border-red-500/50 flex items-center gap-2 text-xs text-red-300 font-semibold">
-            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-            <span>{validationError}</span>
+        {/* Errors list */}
+        {validationErrors.length > 0 && (
+          <div className="p-3 mb-4 rounded-xl bg-red-950/60 border border-red-500/50 space-y-1">
+            {validationErrors.map((err, i) => (
+              <div key={i} className="flex items-center gap-2 text-xs text-red-300 font-semibold">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                <span>{err}</span>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Cricket Pitch Visualization */}
-        <div className="relative bg-gradient-to-b from-emerald-900/60 via-emerald-800/40 to-emerald-950/80 border-2 border-emerald-600/40 rounded-2xl p-4 min-h-[220px] mb-4 overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
-            <div className="w-72 h-72 border-4 border-white rounded-full" />
-          </div>
+        {/* Pitch Visualization */}
+        <div className="relative bg-gradient-to-b from-emerald-900/60 via-emerald-800/40 to-emerald-950/80 border-2 border-emerald-600/40 rounded-2xl p-4 min-h-[160px] mb-4 overflow-hidden">
           <div className="text-center mb-2">
-            <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-300/80 bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-700/40">
-              🏏 Field Preview ({selectedPlayers.length} Active in XI)
+            <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-300 bg-emerald-950/70 px-3 py-1 rounded-full border border-emerald-700/40">
+              🏏 Playing XI Lineup ({selectedPlayers.length} / 11)
             </span>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2">
@@ -139,7 +154,10 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
                   <span className="bg-slate-300 text-slate-950 font-black text-[9px] px-1 rounded">VC</span>
                 )}
                 {player.isOverseas && (
-                  <span className="text-[10px] text-blue-400 font-bold">✈</span>
+                  <span className="text-[10px] text-blue-400 font-bold">✈ OS</span>
+                )}
+                {player.isUnder23 && player.isUncapped && (
+                  <span className="text-[9px] font-black bg-emerald-500/30 text-emerald-300 px-1 rounded">U23</span>
                 )}
               </div>
             ))}
@@ -150,7 +168,7 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
         <div className="max-h-64 overflow-y-auto pr-1 space-y-2">
           {squad.length === 0 ? (
             <p className="text-center text-slate-500 py-6 text-sm">
-              Your franchise has not acquired any players yet. Buy players in the auction first!
+              Your franchise has not acquired any players yet. Buy players in the live auction!
             </p>
           ) : (
             squad.map((player) => {
@@ -186,7 +204,12 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
                         </span>
                         {player.isOverseas && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold">
-                            Overseas
+                            ✈ Overseas
+                          </span>
+                        )}
+                        {player.isUnder23 && player.isUncapped && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">
+                            ★ Uncapped U-23
                           </span>
                         )}
                       </div>
@@ -194,7 +217,6 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Leadership assignment buttons */}
                   {isSelected && (
                     <div className="flex items-center gap-1.5">
                       <button
@@ -225,7 +247,7 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
           )}
         </div>
 
-        {/* Footer actions */}
+        {/* Footer */}
         <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between">
           <button
             onClick={onClose}

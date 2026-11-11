@@ -23,11 +23,11 @@ export default function TradeCentrePage() {
     tradeOffers,
     proposeTrade,
     handleTradeAction,
-    selectedFranchiseId,
+    authenticatedFranchiseId,
   } = useAuction();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [fromTeamId, setFromTeamId] = useState(selectedFranchiseId || "lq");
+  const [fromTeamId, setFromTeamId] = useState(authenticatedFranchiseId || "iu");
   const [toTeamId, setToTeamId] = useState("kk");
   const [offeredPlayerId, setOfferedPlayerId] = useState("");
   const [requestedPlayerId, setRequestedPlayerId] = useState("");
@@ -174,7 +174,7 @@ export default function TradeCentrePage() {
                     >
                       Franchise Accept
                     </button>
-                    {role === "super_admin" && (
+                    {role === "admin" && (
                       <button
                         onClick={() => handleTradeAction(trade.id, "admin_approve")}
                         className="px-5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider"
@@ -318,3 +318,4 @@ export default function TradeCentrePage() {
     </div>
   );
 }
+

@@ -192,3 +192,4 @@ export function generateAuctionPDF(
 
   doc.save(`${auctionTitle.replace(/\s+/g, "_")}.pdf`);
 }
+

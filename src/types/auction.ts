@@ -1,4 +1,6 @@
-export type UserRole = 'super_admin' | 'franchise_owner' | 'co_owner' | 'spectator';
+export type UserRole = 'admin' | 'team_owner' | 'spectator';
+
+export type RulePreset = 'PSL11' | 'PSL12' | 'Custom';
 
 export type PlayerCategory = 'Platinum' | 'Diamond' | 'Gold' | 'Silver' | 'Emerging' | 'Supplementary';
 
@@ -32,15 +34,18 @@ export interface Player {
   primaryRole: PlayerRole;
   secondaryRole?: string;
   category: PlayerCategory;
-  basePrice: number; // in PKR (e.g. 35000000 for 3.5 Crore)
+  basePrice: number; // in PKR
   currentPrice: number;
   status: PlayerAuctionState;
   soldToFranchiseId?: string;
   soldPrice?: number;
   stats?: PlayerStats;
-  auctionRound?: number; // 1 = main round, 2 = unsold round
+  auctionRound?: number;
   isDirectSigning?: boolean;
   isRetained?: boolean;
+  // PSL Rule requirement: Uncapped Under-23 status
+  isUnder23?: boolean;
+  isUncapped?: boolean;
 }
 
 export interface Franchise {
@@ -52,17 +57,18 @@ export interface Franchise {
   primaryColor: string;
   secondaryColor: string;
   ownerName: string;
-  coOwnerName?: string;
-  initialPurse: number; // e.g. 150000000 (15 Crore PKR)
+  initialPurse: number; // standard 45 Cr (450,000,000)
   remainingPurse: number;
   squadCount: number;
-  minSquadSize: number; // default 16
-  maxSquadSize: number; // default 20
-  minOverseas: number; // default 4
-  maxOverseas: number; // default 6
-  playingXI?: string[]; // array of player ids
+  minSquadSize: number; // 16
+  maxSquadSize: number; // 20
+  minOverseas: number; // 5
+  maxOverseas: number; // 7 (depends on squad size)
+  playingXI?: string[];
   captainId?: string;
   viceCaptainId?: string;
+  // Private authentication passkey for Team Owner
+  privatePasskey: string;
 }
 
 export interface Bid {
@@ -74,30 +80,29 @@ export interface Bid {
   timestamp: number;
 }
 
-export interface FranchisePlayerAuctionStatus {
-  franchiseId: string;
-  playerId: string;
-  state: 'active' | 'skipped' | 'out';
-  updatedAt: number;
-}
-
 export interface AuctionSettings {
   id: string;
   name: string;
+  roomCode: string;
   season: string;
+  rulePreset: RulePreset;
   currency: string;
-  totalPursePerTeam: number;
-  minSquadSize: number;
-  maxSquadSize: number;
-  minOverseas: number;
-  maxOverseas: number;
-  defaultTimerSeconds: number; // e.g. 15 seconds
-  timerResetSeconds: number; // reset on new bid
-  extensionSeconds: number; // extra seconds if bid placed near end
-  extensionTriggerSeconds: number; // trigger if <= 5 seconds left
-  noBidTimeoutSeconds: number;
+  totalPursePerTeam: number; // 450,000,000 (45 Cr)
+  maxQualifyingPurse: number; // 505,000,000 (50.5 Cr)
+  minSpendRequirement: number; // 365,000,000 (36.5 Cr)
+  minSquadSize: number; // 16
+  maxSquadSize: number; // 20
+  minOverseasPlayingXI: number; // 3
+  maxOverseasPlayingXI: number; // 4
+  minUncappedU23Squad: number; // 2
+  minUncappedU23PlayingXI: number; // 1
+  maxRetentions: number; // 4
+  maxDirectForeignSignings: number; // 1
+  defaultTimerSeconds: number; // 30s opening
+  timerResetSeconds: number; // 15s reset on bid
+  extensionSeconds: number; // 10s extension
+  extensionTriggerSeconds: number; // in final 5 seconds
   autoSellOnAllOut: boolean;
-  allowSecondRoundForUnsold: boolean;
   soundEffectsEnabled: boolean;
   voiceAnnouncements: boolean;
 }

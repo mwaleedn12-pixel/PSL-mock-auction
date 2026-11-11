@@ -3,22 +3,24 @@
 import React, { useState } from "react";
 import { useAuction } from "@/context/AuctionContext";
 import { formatPKR, getNextMinimumIncrement } from "@/lib/rules";
+import { AuthModal } from "./AuthModal";
 import {
   Gavel,
-  ChevronRight,
-  PlusCircle,
   Slash,
   LogOut,
   AlertCircle,
   CheckCircle,
   Coins,
   ShieldAlert,
+  LogIn,
 } from "lucide-react";
 
 export const BidControls: React.FC = () => {
   const {
     role,
     activeFranchise,
+    authenticatedFranchiseId,
+    franchises,
     currentPlayer,
     highestBid,
     franchiseStatuses,
@@ -27,33 +29,55 @@ export const BidControls: React.FC = () => {
     placeBid,
     skipCurrentPlayer,
     outCurrentPlayer,
-    settings,
   } = useAuction();
 
   const [bidError, setBidError] = useState<string | null>(null);
   const [bidSuccess, setBidSuccess] = useState<string | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [adminSelectedTeamId, setAdminSelectedTeamId] = useState<string>(franchises[0]?.id || "iu");
 
-  if (!activeFranchise) {
+  // Determine which franchise is acting
+  const currentActingFranchise =
+    role === "team_owner"
+      ? activeFranchise
+      : role === "admin"
+      ? franchises.find((f) => f.id === adminSelectedTeamId)
+      : undefined;
+
+  // Spectator View
+  if (role === "spectator" || !currentActingFranchise) {
     return (
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 text-center text-slate-400">
-        <p className="text-sm font-semibold">Select an active franchise above to participate in bidding.</p>
-      </div>
+      <>
+        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 text-center shadow-xl">
+          <ShieldAlert className="w-9 h-9 text-amber-400 mx-auto mb-2" />
+          <h4 className="text-white font-black text-base">Spectator Mode (Read-Only)</h4>
+          <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+            You are watching the live auction stream. To place bids, participate in auctions, and manage squads, log in with your private team passkey.
+          </p>
+          <button
+            onClick={() => setIsAuthModalOpen(true)}
+            className="mt-4 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider inline-flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+          >
+            <LogIn className="w-4 h-4" /> Join as Team Owner / Admin
+          </button>
+        </div>
+        <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+      </>
     );
   }
 
-  const isLeading = Boolean(highestBid && highestBid.franchiseId === activeFranchise.id);
-  const myStatus = franchiseStatuses[activeFranchise.id] || "active";
+  const isLeading = Boolean(highestBid && highestBid.franchiseId === currentActingFranchise.id);
+  const myStatus = franchiseStatuses[currentActingFranchise.id] || "active";
   const isOut = myStatus === "out";
   const isSkipped = myStatus === "skipped";
 
-  const currentAmount = highestBid ? highestBid.amount : (currentPlayer?.basePrice || 0);
   const nextMinIncrement = highestBid ? getNextMinimumIncrement(highestBid.amount) : 0;
   const nextBidAmount = highestBid ? highestBid.amount + nextMinIncrement : (currentPlayer?.basePrice || 0);
 
   const handlePlaceBid = (customAmount?: number) => {
     setBidError(null);
     setBidSuccess(null);
-    const result = placeBid(activeFranchise.id, customAmount);
+    const result = placeBid(currentActingFranchise.id, customAmount);
     if (!result.success) {
       setBidError(result.message);
     } else {
@@ -64,29 +88,17 @@ export const BidControls: React.FC = () => {
 
   const handleSkip = () => {
     setBidError(null);
-    skipCurrentPlayer(activeFranchise.id);
+    skipCurrentPlayer(currentActingFranchise.id);
   };
 
   const handleOut = () => {
     setBidError(null);
     if (isLeading) {
-      setBidError("Leading franchise cannot withdraw while holding highest bid!");
+      setBidError("Leading franchise cannot withdraw while holding the highest bid!");
       return;
     }
-    outCurrentPlayer(activeFranchise.id);
+    outCurrentPlayer(currentActingFranchise.id);
   };
-
-  if (role === "spectator") {
-    return (
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 text-center">
-        <ShieldAlert className="w-8 h-8 text-amber-400 mx-auto mb-2" />
-        <h4 className="text-white font-bold text-sm">Spectator Mode</h4>
-        <p className="text-xs text-slate-400 mt-1">
-          You are viewing the auction in read-only mode. Switch to Franchise Owner in the top bar to place bids.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl relative overflow-hidden">
@@ -94,16 +106,23 @@ export const BidControls: React.FC = () => {
       <div className="flex items-center justify-between pb-4 border-b border-slate-800">
         <div className="flex items-center gap-3">
           <div
-            className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm shadow-md"
-            style={{ backgroundColor: activeFranchise.primaryColor, color: "#fff" }}
+            className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm text-white shadow-md"
+            style={{ backgroundColor: currentActingFranchise.primaryColor }}
           >
-            {activeFranchise.shortName}
+            {currentActingFranchise.shortName}
           </div>
           <div>
-            <h4 className="text-sm font-black text-white">{activeFranchise.name}</h4>
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-black text-white">{currentActingFranchise.name}</h4>
+              {role === "admin" && (
+                <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-1.5 rounded">
+                  Admin Simulator
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-1.5 text-xs text-slate-400">
               <Coins className="w-3.5 h-3.5 text-amber-400" />
-              <span>Purse: <strong className="text-amber-400 font-bold">{formatPKR(activeFranchise.remainingPurse)}</strong></span>
+              <span>Purse: <strong className="text-amber-400 font-bold">{formatPKR(currentActingFranchise.remainingPurse)}</strong></span>
             </div>
           </div>
         </div>
@@ -130,6 +149,24 @@ export const BidControls: React.FC = () => {
         </div>
       </div>
 
+      {/* Admin Simulator Team Selector if role is admin */}
+      {role === "admin" && (
+        <div className="mt-3 flex items-center gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800 text-xs">
+          <span className="text-slate-400 font-semibold">Admin Bid As:</span>
+          <select
+            value={adminSelectedTeamId}
+            onChange={(e) => setAdminSelectedTeamId(e.target.value)}
+            className="bg-transparent text-white font-bold focus:outline-none cursor-pointer"
+          >
+            {franchises.map((f) => (
+              <option key={f.id} value={f.id} className="bg-slate-900 text-white">
+                {f.shortName} - {f.name} ({formatPKR(f.remainingPurse)})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Feedback Messages */}
       {bidError && (
         <div className="mt-4 p-3 rounded-xl bg-red-950/60 border border-red-500/50 flex items-center gap-2 text-xs text-red-300 font-semibold animate-shake">
@@ -138,14 +175,14 @@ export const BidControls: React.FC = () => {
         </div>
       )}
       {bidSuccess && (
-        <div className="mt-4 p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/50 flex items-center gap-2 text-xs text-emerald-300 font-semibold animate-fadeIn">
+        <div className="mt-4 p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/50 flex items-center gap-2 text-xs text-emerald-300 font-semibold">
           <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>{bidSuccess}</span>
         </div>
       )}
 
       {/* Main Bid Action Button */}
-      <div className="mt-5">
+      <div className="mt-4">
         <button
           disabled={auctionStatus !== "Live" || !isTimerRunning || isOut || isLeading}
           onClick={() => handlePlaceBid(nextBidAmount)}
@@ -177,31 +214,31 @@ export const BidControls: React.FC = () => {
         </button>
       </div>
 
-      {/* Increment Quick Brackets */}
+      {/* Quick Increments based on Section 5 rules */}
       {!isOut && !isLeading && auctionStatus === "Live" && (
         <div className="mt-3 grid grid-cols-3 gap-2">
           <button
-            onClick={() => handlePlaceBid(nextBidAmount + 1000000)}
+            onClick={() => handlePlaceBid(nextBidAmount + 250000)}
             className="py-2 px-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl text-xs font-bold text-slate-200 transition-colors"
           >
-            +{formatPKR(1000000)} (10L)
+            +{formatPKR(250000)} (2.5L)
           </button>
           <button
-            onClick={() => handlePlaceBid(nextBidAmount + 2500000)}
+            onClick={() => handlePlaceBid(nextBidAmount + 500000)}
             className="py-2 px-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl text-xs font-bold text-amber-300 transition-colors"
           >
-            +{formatPKR(2500000)} (25L)
+            +{formatPKR(500000)} (5L)
           </button>
           <button
-            onClick={() => handlePlaceBid(nextBidAmount + 5000000)}
+            onClick={() => handlePlaceBid(nextBidAmount + 1000000)}
             className="py-2 px-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl text-xs font-bold text-emerald-300 transition-colors"
           >
-            +{formatPKR(5000000)} (50L)
+            +{formatPKR(1000000)} (10L)
           </button>
         </div>
       )}
 
-      {/* Skip and Out Controls (FR-09) */}
+      {/* Skip and Out Controls (Section 13) */}
       <div className="mt-4 pt-4 border-t border-slate-800/80 grid grid-cols-2 gap-3">
         <button
           disabled={auctionStatus !== "Live" || isOut || isSkipped || isLeading}
@@ -224,9 +261,8 @@ export const BidControls: React.FC = () => {
         </button>
       </div>
 
-      {/* Rule Notice */}
       <p className="text-[10px] text-slate-500 text-center mt-3">
-        Server timestamp validated. Minimum reserve purse rule enforced automatically.
+        PSL Official Increments & Reserve Purse rules validated on server.
       </p>
     </div>
   );

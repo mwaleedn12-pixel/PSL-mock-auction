@@ -1,7 +1,7 @@
 import { Player } from "@/types/auction";
 
 export const INITIAL_PLAYERS: Player[] = [
-  // --- PLATINUM (Base: 3.5 Crore = 35,000,000 PKR) ---
+  // --- BRACKET 1: PKR 4.2 Crore (Platinum Base) ---
   {
     id: "p1",
     name: "Babar Azam",
@@ -13,10 +13,12 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Right-arm offbreak",
     primaryRole: "Batter",
     category: "Platinum",
-    basePrice: 35000000,
-    currentPrice: 35000000,
+    basePrice: 42000000, // 4.2 Crore
+    currentPrice: 42000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: false,
+    isUncapped: false,
     stats: { matches: 90, runs: 3504, battingAverage: 44.3, strikeRate: 132.8 }
   },
   {
@@ -30,10 +32,12 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Left-arm fast",
     primaryRole: "Bowler",
     category: "Platinum",
-    basePrice: 35000000,
-    currentPrice: 35000000,
+    basePrice: 42000000,
+    currentPrice: 42000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: false,
+    isUncapped: false,
     stats: { matches: 72, wickets: 104, bowlingAverage: 20.8, economyRate: 7.9 }
   },
   {
@@ -47,10 +51,12 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Right-arm medium",
     primaryRole: "Wicketkeeper",
     category: "Platinum",
-    basePrice: 35000000,
-    currentPrice: 35000000,
+    basePrice: 42000000,
+    currentPrice: 42000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: false,
+    isUncapped: false,
     stats: { matches: 81, runs: 3012, battingAverage: 43.6, strikeRate: 129.5, catches: 52, stumpings: 18 }
   },
   {
@@ -65,10 +71,12 @@ export const INITIAL_PLAYERS: Player[] = [
     primaryRole: "Bowler",
     secondaryRole: "All-Rounder",
     category: "Platinum",
-    basePrice: 35000000,
-    currentPrice: 35000000,
+    basePrice: 42000000,
+    currentPrice: 42000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: false,
+    isUncapped: false,
     stats: { matches: 42, wickets: 61, bowlingAverage: 17.5, economyRate: 6.2 }
   },
   {
@@ -82,10 +90,12 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Right-arm fast",
     primaryRole: "Bowler",
     category: "Platinum",
-    basePrice: 35000000,
-    currentPrice: 35000000,
+    basePrice: 42000000,
+    currentPrice: 42000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: true,
+    isUncapped: false, // Capped international
     stats: { matches: 45, wickets: 58, bowlingAverage: 22.4, economyRate: 7.6 }
   },
   {
@@ -99,14 +109,16 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Right-arm offbreak",
     primaryRole: "Batter",
     category: "Platinum",
-    basePrice: 35000000,
-    currentPrice: 35000000,
+    basePrice: 42000000,
+    currentPrice: 42000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: false,
+    isUncapped: false,
     stats: { matches: 28, runs: 680, battingAverage: 37.8, strikeRate: 148.5 }
   },
 
-  // --- DIAMOND (Base: 2.0 Crore = 20,000,000 PKR) ---
+  // --- BRACKET 2: PKR 2.2 Crore (Diamond Base) ---
   {
     id: "p7",
     name: "Shadab Khan",
@@ -118,10 +130,12 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Right-arm legbreak",
     primaryRole: "All-Rounder",
     category: "Diamond",
-    basePrice: 20000000,
-    currentPrice: 20000000,
+    basePrice: 22000000, // 2.2 Crore
+    currentPrice: 22000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: false,
+    isUncapped: false,
     stats: { matches: 78, runs: 1250, wickets: 85, battingAverage: 24.5, strikeRate: 141.2 }
   },
   {
@@ -135,10 +149,12 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Slow left-arm orthodox",
     primaryRole: "Batter",
     category: "Diamond",
-    basePrice: 20000000,
-    currentPrice: 20000000,
+    basePrice: 22000000,
+    currentPrice: 22000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: false,
+    isUncapped: false,
     stats: { matches: 84, runs: 2680, battingAverage: 31.9, strikeRate: 142.1 }
   },
   {
@@ -152,10 +168,12 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Right-arm fast",
     primaryRole: "Bowler",
     category: "Diamond",
-    basePrice: 20000000,
-    currentPrice: 20000000,
+    basePrice: 22000000,
+    currentPrice: 22000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: false,
+    isUncapped: false,
     stats: { matches: 62, wickets: 88, bowlingAverage: 21.6, economyRate: 8.4 }
   },
   {
@@ -169,10 +187,12 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Right-arm medium",
     primaryRole: "Batter",
     category: "Diamond",
-    basePrice: 20000000,
-    currentPrice: 20000000,
+    basePrice: 22000000,
+    currentPrice: 22000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: false,
+    isUncapped: false,
     stats: { matches: 45, runs: 1420, battingAverage: 33.0, strikeRate: 149.6 }
   },
   {
@@ -186,33 +206,18 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Right-arm offbreak",
     primaryRole: "All-Rounder",
     category: "Diamond",
-    basePrice: 20000000,
-    currentPrice: 20000000,
+    basePrice: 22000000,
+    currentPrice: 22000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: false,
+    isUncapped: false,
     stats: { matches: 34, runs: 590, wickets: 28, battingAverage: 25.6, strikeRate: 144.2 }
   },
+
+  // --- BRACKET 3: PKR 1.1 Crore (Gold Base) ---
   {
     id: "p12",
-    name: "Iftikhar Ahmed (Chacha)",
-    photoUrl: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=400&auto=format&fit=crop&q=80",
-    nationality: "Pakistan",
-    isOverseas: false,
-    age: 34,
-    battingStyle: "Right-hand bat",
-    bowlingStyle: "Right-arm offbreak",
-    primaryRole: "All-Rounder",
-    category: "Diamond",
-    basePrice: 20000000,
-    currentPrice: 20000000,
-    status: "upcoming",
-    auctionRound: 1,
-    stats: { matches: 68, runs: 1350, wickets: 32, battingAverage: 28.1, strikeRate: 139.7 }
-  },
-
-  // --- GOLD (Base: 1.0 Crore = 10,000,000 PKR) ---
-  {
-    id: "p13",
     name: "Saim Ayub",
     photoUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
     nationality: "Pakistan",
@@ -222,14 +227,16 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Right-arm offbreak",
     primaryRole: "Batter",
     category: "Gold",
-    basePrice: 10000000,
-    currentPrice: 10000000,
+    basePrice: 11000000, // 1.1 Crore
+    currentPrice: 11000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: true,
+    isUncapped: false,
     stats: { matches: 30, runs: 850, battingAverage: 29.3, strikeRate: 154.2 }
   },
   {
-    id: "p14",
+    id: "p13",
     name: "Aamer Jamal",
     photoUrl: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80",
     nationality: "Pakistan",
@@ -239,14 +246,16 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Right-arm fast-medium",
     primaryRole: "All-Rounder",
     category: "Gold",
-    basePrice: 10000000,
-    currentPrice: 10000000,
+    basePrice: 11000000,
+    currentPrice: 11000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: false,
+    isUncapped: false,
     stats: { matches: 25, runs: 340, wickets: 29, battingAverage: 21.2, strikeRate: 162.0 }
   },
   {
-    id: "p15",
+    id: "p14",
     name: "Rilee Rossouw",
     photoUrl: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400&auto=format&fit=crop&q=80",
     nationality: "South Africa",
@@ -256,14 +265,16 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Right-arm offbreak",
     primaryRole: "Batter",
     category: "Gold",
-    basePrice: 10000000,
-    currentPrice: 10000000,
+    basePrice: 11000000,
+    currentPrice: 11000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: false,
+    isUncapped: false,
     stats: { matches: 58, runs: 1650, battingAverage: 33.6, strikeRate: 152.0 }
   },
   {
-    id: "p16",
+    id: "p15",
     name: "Usama Mir",
     photoUrl: "https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=400&auto=format&fit=crop&q=80",
     nationality: "Pakistan",
@@ -273,50 +284,18 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Right-arm legbreak",
     primaryRole: "Bowler",
     category: "Gold",
-    basePrice: 10000000,
-    currentPrice: 10000000,
+    basePrice: 11000000,
+    currentPrice: 11000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: false,
+    isUncapped: false,
     stats: { matches: 36, wickets: 48, bowlingAverage: 20.1, economyRate: 7.8 }
   },
-  {
-    id: "p17",
-    name: "Sam Billings",
-    photoUrl: "https://images.unsplash.com/photo-1463453091185-61582044d556?w=400&auto=format&fit=crop&q=80",
-    nationality: "England",
-    isOverseas: true,
-    age: 33,
-    battingStyle: "Right-hand bat",
-    bowlingStyle: "None",
-    primaryRole: "Wicketkeeper",
-    category: "Gold",
-    basePrice: 10000000,
-    currentPrice: 10000000,
-    status: "upcoming",
-    auctionRound: 1,
-    stats: { matches: 22, runs: 490, battingAverage: 28.8, strikeRate: 138.4, catches: 18 }
-  },
-  {
-    id: "p18",
-    name: "Mohammad Wasim Jr",
-    photoUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80",
-    nationality: "Pakistan",
-    isOverseas: false,
-    age: 23,
-    battingStyle: "Right-hand bat",
-    bowlingStyle: "Right-arm fast-medium",
-    primaryRole: "Bowler",
-    category: "Gold",
-    basePrice: 10000000,
-    currentPrice: 10000000,
-    status: "upcoming",
-    auctionRound: 1,
-    stats: { matches: 40, wickets: 45, bowlingAverage: 23.5, economyRate: 8.5 }
-  },
 
-  // --- SILVER (Base: 50 Lakh = 5,000,000 PKR) ---
+  // --- BRACKET 4: PKR 60 Lakh (Silver & Emerging Share 60L Base) ---
   {
-    id: "p19",
+    id: "p16",
     name: "Mohammad Haris",
     photoUrl: "https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=400&auto=format&fit=crop&q=80",
     nationality: "Pakistan",
@@ -326,84 +305,37 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Right-arm offbreak",
     primaryRole: "Wicketkeeper",
     category: "Silver",
-    basePrice: 5000000,
-    currentPrice: 5000000,
+    basePrice: 6000000, // 60 Lakh
+    currentPrice: 6000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: true,
+    isUncapped: false,
     stats: { matches: 28, runs: 650, battingAverage: 25.0, strikeRate: 165.5, catches: 14 }
   },
   {
-    id: "p20",
+    id: "p17",
     name: "Zaman Khan",
     photoUrl: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&auto=format&fit=crop&q=80",
     nationality: "Pakistan",
     isOverseas: false,
     age: 23,
     battingStyle: "Right-hand bat",
-    bowlingStyle: "Right-arm fast (slinger)",
+    bowlingStyle: "Right-arm fast",
     primaryRole: "Bowler",
     category: "Silver",
-    basePrice: 5000000,
-    currentPrice: 5000000,
+    basePrice: 6000000,
+    currentPrice: 6000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: true,
+    isUncapped: false,
     stats: { matches: 32, wickets: 40, bowlingAverage: 21.0, economyRate: 8.1 }
   },
-  {
-    id: "p21",
-    name: "Shahnawaz Dahani",
-    photoUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
-    nationality: "Pakistan",
-    isOverseas: false,
-    age: 26,
-    battingStyle: "Right-hand bat",
-    bowlingStyle: "Right-arm fast-medium",
-    primaryRole: "Bowler",
-    category: "Silver",
-    basePrice: 5000000,
-    currentPrice: 5000000,
-    status: "upcoming",
-    auctionRound: 1,
-    stats: { matches: 30, wickets: 38, bowlingAverage: 24.2, economyRate: 8.7 }
-  },
-  {
-    id: "p22",
-    name: "Agha Salman",
-    photoUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80",
-    nationality: "Pakistan",
-    isOverseas: false,
-    age: 31,
-    battingStyle: "Right-hand bat",
-    bowlingStyle: "Right-arm offbreak",
-    primaryRole: "All-Rounder",
-    category: "Silver",
-    basePrice: 5000000,
-    currentPrice: 5000000,
-    status: "upcoming",
-    auctionRound: 1,
-    stats: { matches: 25, runs: 420, wickets: 12, battingAverage: 26.2, strikeRate: 135.0 }
-  },
-  {
-    id: "p23",
-    name: "Colin Munro",
-    photoUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80",
-    nationality: "New Zealand",
-    isOverseas: true,
-    age: 37,
-    battingStyle: "Left-hand bat",
-    bowlingStyle: "Right-arm medium",
-    primaryRole: "Batter",
-    category: "Silver",
-    basePrice: 5000000,
-    currentPrice: 5000000,
-    status: "upcoming",
-    auctionRound: 1,
-    stats: { matches: 40, runs: 1280, battingAverage: 35.5, strikeRate: 147.8 }
-  },
 
-  // --- EMERGING (Base: 25 Lakh = 2,500,000 PKR) ---
+  // --- UNCAPPED UNDER-23 STARS (Section 7 Compliance) ---
   {
-    id: "p24",
+    id: "p18",
     name: "Mehran Mumtaz",
     photoUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80",
     nationality: "Pakistan",
@@ -413,14 +345,16 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Slow left-arm orthodox",
     primaryRole: "Bowler",
     category: "Emerging",
-    basePrice: 2500000,
-    currentPrice: 2500000,
+    basePrice: 6000000, // 60 Lakh
+    currentPrice: 6000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: true,
+    isUncapped: true, // Uncapped Under-23!
     stats: { matches: 12, wickets: 15, bowlingAverage: 19.8, economyRate: 6.9 }
   },
   {
-    id: "p25",
+    id: "p19",
     name: "Mohammad Zeeshan",
     photoUrl: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=400&auto=format&fit=crop&q=80",
     nationality: "Pakistan",
@@ -430,14 +364,16 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Right-arm fast",
     primaryRole: "Bowler",
     category: "Emerging",
-    basePrice: 2500000,
-    currentPrice: 2500000,
+    basePrice: 6000000,
+    currentPrice: 6000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: true,
+    isUncapped: true, // Uncapped Under-23!
     stats: { matches: 8, wickets: 11, bowlingAverage: 22.0, economyRate: 7.8 }
   },
   {
-    id: "p26",
+    id: "p20",
     name: "Haseebullah Khan",
     photoUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
     nationality: "Pakistan",
@@ -447,14 +383,16 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "None",
     primaryRole: "Wicketkeeper",
     category: "Emerging",
-    basePrice: 2500000,
-    currentPrice: 2500000,
+    basePrice: 6000000,
+    currentPrice: 6000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: true,
+    isUncapped: true, // Uncapped Under-23!
     stats: { matches: 15, runs: 320, battingAverage: 24.6, strikeRate: 134.2, catches: 10 }
   },
   {
-    id: "p27",
+    id: "p21",
     name: "Yasir Khan",
     photoUrl: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80",
     nationality: "Pakistan",
@@ -464,16 +402,54 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Right-arm offbreak",
     primaryRole: "Batter",
     category: "Emerging",
-    basePrice: 2500000,
-    currentPrice: 2500000,
+    basePrice: 6000000,
+    currentPrice: 6000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: true,
+    isUncapped: true, // Uncapped Under-23!
     stats: { matches: 10, runs: 240, battingAverage: 26.6, strikeRate: 145.0 }
   },
-
-  // --- SUPPLEMENTARY (Base: 25 Lakh = 2,500,000 PKR) ---
   {
-    id: "p28",
+    id: "p22",
+    name: "Ali Asfand",
+    photoUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
+    nationality: "Pakistan",
+    isOverseas: false,
+    age: 20,
+    battingStyle: "Left-hand bat",
+    bowlingStyle: "Slow left-arm orthodox",
+    primaryRole: "Bowler",
+    category: "Emerging",
+    basePrice: 6000000,
+    currentPrice: 6000000,
+    status: "upcoming",
+    auctionRound: 1,
+    isUnder23: true,
+    isUncapped: true, // Uncapped Under-23!
+    stats: { matches: 6, wickets: 8, bowlingAverage: 21.5, economyRate: 7.2 }
+  },
+  {
+    id: "p23",
+    name: "Ubaid Shah",
+    photoUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80",
+    nationality: "Pakistan",
+    isOverseas: false,
+    age: 19,
+    battingStyle: "Right-hand bat",
+    bowlingStyle: "Right-arm fast",
+    primaryRole: "Bowler",
+    category: "Emerging",
+    basePrice: 6000000,
+    currentPrice: 6000000,
+    status: "upcoming",
+    auctionRound: 1,
+    isUnder23: true,
+    isUncapped: true, // Uncapped Under-23!
+    stats: { matches: 9, wickets: 12, bowlingAverage: 23.1, economyRate: 8.6 }
+  },
+  {
+    id: "p24",
     name: "Shai Hope",
     photoUrl: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400&auto=format&fit=crop&q=80",
     nationality: "West Indies",
@@ -483,14 +459,16 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "None",
     primaryRole: "Wicketkeeper",
     category: "Supplementary",
-    basePrice: 2500000,
-    currentPrice: 2500000,
+    basePrice: 6000000,
+    currentPrice: 6000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: false,
+    isUncapped: false,
     stats: { matches: 16, runs: 410, battingAverage: 31.5, strikeRate: 136.6, catches: 8 }
   },
   {
-    id: "p29",
+    id: "p25",
     name: "Tim David",
     photoUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
     nationality: "Australia",
@@ -500,27 +478,12 @@ export const INITIAL_PLAYERS: Player[] = [
     bowlingStyle: "Right-arm offbreak",
     primaryRole: "Batter",
     category: "Supplementary",
-    basePrice: 2500000,
-    currentPrice: 2500000,
+    basePrice: 6000000,
+    currentPrice: 6000000,
     status: "upcoming",
     auctionRound: 1,
+    isUnder23: false,
+    isUncapped: false,
     stats: { matches: 20, runs: 480, battingAverage: 36.9, strikeRate: 172.5 }
-  },
-  {
-    id: "p30",
-    name: "Abbas Afridi",
-    photoUrl: "https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=400&auto=format&fit=crop&q=80",
-    nationality: "Pakistan",
-    isOverseas: false,
-    age: 23,
-    battingStyle: "Right-hand bat",
-    bowlingStyle: "Right-arm fast-medium",
-    primaryRole: "Bowler",
-    category: "Supplementary",
-    basePrice: 2500000,
-    currentPrice: 2500000,
-    status: "upcoming",
-    auctionRound: 1,
-    stats: { matches: 22, wickets: 31, bowlingAverage: 20.4, economyRate: 8.8 }
   }
 ];

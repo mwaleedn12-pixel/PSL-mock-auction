@@ -217,3 +217,4 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
     </div>
   );
 };
+

@@ -321,7 +321,7 @@ export default function LiveAuctionArenaPage() {
       </div>
 
       {/* Admin Bottom Auction Controller Bar */}
-      {role === "super_admin" && (
+      {role === "admin" && (
         <div className="mt-8 bg-slate-900/95 border border-slate-800 rounded-2xl p-4 shadow-2xl flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -383,3 +383,4 @@ export default function LiveAuctionArenaPage() {
     </div>
   );
 }
+

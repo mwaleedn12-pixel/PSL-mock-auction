@@ -11,7 +11,7 @@ import {
   AuctionEventLog,
   WatchlistItem,
   TradeOffer,
-  FranchisePlayerAuctionStatus,
+  RulePreset,
 } from "@/types/auction";
 import { INITIAL_FRANCHISES } from "@/data/initialFranchises";
 import { INITIAL_PLAYERS } from "@/data/initialPlayers";
@@ -20,12 +20,17 @@ import { validateBid, getNextMinimumIncrement } from "@/lib/rules";
 import confetti from "canvas-confetti";
 
 interface AuctionContextType {
+  // Authentication & RBAC (3 Roles: admin, team_owner, spectator)
   role: UserRole;
-  setRole: (role: UserRole) => void;
-  selectedFranchiseId: string;
-  setSelectedFranchiseId: (id: string) => void;
+  authenticatedFranchiseId: string | null;
   activeFranchise: Franchise | undefined;
+  loginAsAdmin: (password: string) => { success: boolean; message: string };
+  loginAsTeamOwner: (passkey: string, roomCode?: string) => { success: boolean; message: string };
+  logoutToSpectator: () => void;
 
+  // Presets & Auction State
+  rulePreset: RulePreset;
+  setRulePreset: (preset: RulePreset) => void;
   auctionStatus: AuctionStatus;
   franchises: Franchise[];
   players: Player[];
@@ -45,9 +50,9 @@ interface AuctionContextType {
   startAuction: () => void;
   pauseAuction: () => void;
   resumeAuction: () => void;
-  placeBid: (franchiseId: string, customAmount?: number) => { success: boolean; message: string };
-  skipCurrentPlayer: (franchiseId: string) => void;
-  outCurrentPlayer: (franchiseId: string) => void;
+  placeBid: (franchiseId?: string, customAmount?: number) => { success: boolean; message: string };
+  skipCurrentPlayer: (franchiseId?: string) => void;
+  outCurrentPlayer: (franchiseId?: string) => void;
   finalizePlayer: (forceSold?: boolean, winningBid?: Bid | null) => void;
   goToNextPlayer: () => void;
   goToPreviousPlayer: () => void;
@@ -65,40 +70,46 @@ interface AuctionContextType {
   proposeTrade: (trade: Omit<TradeOffer, "id" | "createdAt" | "status">) => void;
   handleTradeAction: (tradeId: string, action: 'accept' | 'reject' | 'admin_approve' | 'cancel') => void;
   updateSettings: (newSettings: Partial<AuctionSettings>) => void;
-  updateFranchisePurse: (franchiseId: string, newPurse: number) => void;
 }
 
 const DEFAULT_SETTINGS: AuctionSettings = {
   id: "psl-12-default",
-  name: "PSL 12 Official Mock Auction",
-  season: "Season 12 (2025/2026)",
+  name: "PSL 12 Official Mock Auction Room",
+  roomCode: "PSL12-AUCTION-2027",
+  season: "PSL Season 12",
+  rulePreset: "PSL11", // Preset A: PSL 11 rules preset
   currency: "PKR",
-  totalPursePerTeam: 150000000, // 15 Crore PKR
+  totalPursePerTeam: 450000000, // 45 Crore standard
+  maxQualifyingPurse: 505000000, // 50.5 Crore qualifying
+  minSpendRequirement: 365000000, // 36.5 Crore
   minSquadSize: 16,
   maxSquadSize: 20,
-  minOverseas: 4,
-  maxOverseas: 6,
-  defaultTimerSeconds: 15,
-  timerResetSeconds: 15,
-  extensionSeconds: 5,
-  extensionTriggerSeconds: 5,
-  noBidTimeoutSeconds: 15,
+  minOverseasPlayingXI: 3,
+  maxOverseasPlayingXI: 4,
+  minUncappedU23Squad: 2,
+  minUncappedU23PlayingXI: 1,
+  maxRetentions: 4,
+  maxDirectForeignSignings: 1,
+  defaultTimerSeconds: 30, // 30s opening timer
+  timerResetSeconds: 15, // 15s reset on bid
+  extensionSeconds: 10, // 10s extension
+  extensionTriggerSeconds: 5, // trigger in last 5 seconds
   autoSellOnAllOut: true,
-  allowSecondRoundForUnsold: true,
   soundEffectsEnabled: true,
   voiceAnnouncements: true,
 };
 
-const STORAGE_KEY = "psl_12_mock_auction_state_v1";
+const STORAGE_KEY = "psl_12_mock_auction_state_v2";
 
 const AuctionContext = createContext<AuctionContextType | undefined>(undefined);
 
 export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Navigation & User role state
-  const [role, setRole] = useState<UserRole>("super_admin");
-  const [selectedFranchiseId, setSelectedFranchiseId] = useState<string>("lq");
+  // Authentication & RBAC (Default is spectator as requested: "login direct na aai")
+  const [role, setRole] = useState<UserRole>("spectator");
+  const [authenticatedFranchiseId, setAuthenticatedFranchiseId] = useState<string | null>(null);
 
   // Core Auction State
+  const [rulePreset, setRulePresetState] = useState<RulePreset>("PSL11");
   const [auctionStatus, setAuctionStatus] = useState<AuctionStatus>("Ready");
   const [franchises, setFranchises] = useState<Franchise[]>(INITIAL_FRANCHISES);
   const [players, setPlayers] = useState<Player[]>(INITIAL_PLAYERS);
@@ -115,7 +126,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load initial state from LocalStorage on mount
+  // Load state from LocalStorage on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -129,17 +140,18 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (parsed.currentBids) setCurrentBids(parsed.currentBids);
           if (parsed.franchiseStatuses) setFranchiseStatuses(parsed.franchiseStatuses);
           if (parsed.settings) setSettings(parsed.settings);
+          if (parsed.rulePreset) setRulePresetState(parsed.rulePreset);
           if (parsed.watchlists) setWatchlists(parsed.watchlists);
           if (parsed.tradeOffers) setTradeOffers(parsed.tradeOffers);
           if (parsed.eventLogs) setEventLogs(parsed.eventLogs);
-        } catch {
-          // fallback to defaults
-        }
+          if (parsed.role) setRole(parsed.role);
+          if (parsed.authenticatedFranchiseId) setAuthenticatedFranchiseId(parsed.authenticatedFranchiseId);
+        } catch {}
       }
 
       // Initialize cross-tab BroadcastChannel
       try {
-        const bc = new BroadcastChannel("psl_auction_sync_channel");
+        const bc = new BroadcastChannel("psl_auction_sync_channel_v2");
         broadcastChannelRef.current = bc;
         bc.onmessage = (event) => {
           if (event.data?.type === "STATE_SYNC") {
@@ -165,7 +177,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   }, []);
 
-  // Save to LocalStorage and broadcast on state changes
+  // Save to LocalStorage
   const persistState = useCallback(() => {
     if (typeof window !== "undefined") {
       const stateToSave = {
@@ -176,36 +188,31 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         currentBids,
         franchiseStatuses,
         settings,
+        rulePreset,
         watchlists,
         tradeOffers,
         eventLogs,
+        role,
+        authenticatedFranchiseId,
       };
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
       } catch {}
     }
-  }, [franchises, players, auctionStatus, currentPlayerIndex, currentBids, franchiseStatuses, settings, watchlists, tradeOffers, eventLogs]);
+  }, [franchises, players, auctionStatus, currentPlayerIndex, currentBids, franchiseStatuses, settings, rulePreset, watchlists, tradeOffers, eventLogs, role, authenticatedFranchiseId]);
 
   useEffect(() => {
     persistState();
   }, [persistState]);
 
-  // Derived current player and highest bid
+  // Derived current player, highest bid, and active franchise
   const currentPlayer = players[currentPlayerIndex] || null;
   const highestBid = currentBids.length > 0 ? currentBids[currentBids.length - 1] : null;
-  const activeFranchise = franchises.find((f) => f.id === selectedFranchiseId);
+  const activeFranchise = authenticatedFranchiseId
+    ? franchises.find((f) => f.id === authenticatedFranchiseId)
+    : undefined;
 
-  // Broadcast state to other tabs
-  const broadcastSync = (data: Record<string, unknown>) => {
-    if (broadcastChannelRef.current) {
-      broadcastChannelRef.current.postMessage({
-        type: "STATE_SYNC",
-        payload: data,
-      });
-    }
-  };
-
-  // Add event log helper
+  // Helper to add event log
   const addLog = (
     type: AuctionEventLog["type"],
     description: string,
@@ -221,6 +228,84 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setEventLogs((prev) => [newLog, ...prev.slice(0, 199)]);
   };
 
+  // Broadcast state
+  const broadcastSync = (data: Record<string, unknown>) => {
+    if (broadcastChannelRef.current) {
+      broadcastChannelRef.current.postMessage({
+        type: "STATE_SYNC",
+        payload: data,
+      });
+    }
+  };
+
+  // --- Authentication Handlers ---
+  const loginAsAdmin = (password: string) => {
+    if (password === "admin123" || password === "admin" || password === "psl12") {
+      setRole("admin");
+      setAuthenticatedFranchiseId(null);
+      addLog("admin", "Super Administrator logged in.");
+      return { success: true, message: "Welcome Super Administrator! Auction control unlocked." };
+    }
+    return { success: false, message: "Invalid Admin password. (Hint: default is admin123)" };
+  };
+
+  const loginAsTeamOwner = (passkey: string, roomCode?: string) => {
+    const cleanKey = passkey.trim().toUpperCase();
+    const matchedFranchise = franchises.find(
+      (f) => f.privatePasskey.toUpperCase() === cleanKey || f.id.toUpperCase() === cleanKey
+    );
+
+    if (matchedFranchise) {
+      setRole("team_owner");
+      setAuthenticatedFranchiseId(matchedFranchise.id);
+      addLog("admin", `${matchedFranchise.name} Team Owner joined room.`);
+      return { success: true, message: `Access granted! You are logged in as Team Owner of ${matchedFranchise.name}.` };
+    }
+    return { success: false, message: "Invalid Team Passkey. Please verify the code provided by the Admin." };
+  };
+
+  const logoutToSpectator = () => {
+    setRole("spectator");
+    setAuthenticatedFranchiseId(null);
+  };
+
+  // Rule Preset Selector (Preset A: PSL 11 vs Preset B: PSL 12)
+  const setRulePreset = (preset: RulePreset) => {
+    setRulePresetState(preset);
+    if (preset === "PSL11") {
+      setSettings((prev) => ({
+        ...prev,
+        rulePreset: "PSL11",
+        name: "PSL 11 Official Rules Mock Auction",
+        totalPursePerTeam: 450000000,
+        maxQualifyingPurse: 505000000,
+        minSpendRequirement: 365000000,
+        minSquadSize: 16,
+        maxSquadSize: 20,
+        minOverseasPlayingXI: 3,
+        maxOverseasPlayingXI: 4,
+        minUncappedU23Squad: 2,
+        minUncappedU23PlayingXI: 1,
+        maxRetentions: 4,
+        maxDirectForeignSignings: 1,
+      }));
+      addLog("admin", "Rule Preset changed to: PRESET A - PSL 11 Official Rules.");
+    } else if (preset === "PSL12") {
+      setSettings((prev) => ({
+        ...prev,
+        rulePreset: "PSL12",
+        name: "PSL 12 Announced Framework Mock Auction",
+        totalPursePerTeam: 450000000,
+        maxQualifyingPurse: 505000000,
+        minSpendRequirement: 365000000,
+        minSquadSize: 16,
+        maxSquadSize: 20,
+        maxDirectForeignSignings: 1,
+      }));
+      addLog("admin", "Rule Preset changed to: PRESET B - PSL 12 Announced Framework.");
+    }
+  };
+
   // Finalize current player (Sold or Unsold)
   const finalizePlayer = useCallback(
     (forceSold?: boolean, winningBidParam?: Bid | null) => {
@@ -233,13 +318,11 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setIsTimerRunning(false);
 
       if (isSold && finalBid) {
-        // Sold logic
         const winningTeam = franchises.find((f) => f.id === finalBid.franchiseId);
         soundEngine.playGavelHammerSound();
         soundEngine.playSoldFanfare();
         soundEngine.speakAnnouncement(`${current.name} sold to ${finalBid.franchiseName} for PKR ${(finalBid.amount / 10000000).toFixed(2)} Crore!`);
 
-        // Confetti celebration
         if (typeof window !== "undefined") {
           try {
             confetti({
@@ -251,7 +334,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
           } catch {}
         }
 
-        // Deduct franchise purse & increment squad
+        // Deduct purse & increment squad
         setFranchises((prev) =>
           prev.map((f) => {
             if (f.id === finalBid.franchiseId) {
@@ -289,17 +372,13 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
           amount: finalBid.amount,
         });
       } else {
-        // Unsold logic
         soundEngine.playGavelHammerSound();
-        soundEngine.speakAnnouncement(`${current.name} goes unsold.`);
+        soundEngine.speakAnnouncement(`${current.name} marked unsold.`);
 
         setPlayers((prev) =>
           prev.map((p, idx) => {
             if (idx === currentPlayerIndex) {
-              return {
-                ...p,
-                status: "unsold",
-              };
+              return { ...p, status: "unsold" };
             }
             return p;
           })
@@ -311,7 +390,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         });
       }
 
-      // Automatically transition to next player after a brief 3.5 second pause
+      // Transition to next player after brief pause
       setTimeout(() => {
         goToNextPlayer();
       }, 3500);
@@ -327,7 +406,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setTimer(settings.defaultTimerSeconds);
     setIsTimerRunning(false);
 
-    // Find next player with status 'upcoming'
     let nextIdx = currentPlayerIndex + 1;
     while (nextIdx < players.length && players[nextIdx].status !== "upcoming") {
       nextIdx++;
@@ -337,17 +415,15 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setCurrentPlayerIndex(nextIdx);
       if (auctionStatus === "Live") {
         setIsTimerRunning(true);
-        soundEngine.speakAnnouncement(`Next up: ${players[nextIdx].name}, category ${players[nextIdx].category}, base price ${(players[nextIdx].basePrice / 10000000).toFixed(2)} Crore.`);
+        soundEngine.speakAnnouncement(`Next player: ${players[nextIdx].name}, category ${players[nextIdx].category}, base price ${(players[nextIdx].basePrice / 10000000).toFixed(2)} Crore.`);
       }
     } else {
-      // Auction completed or round 1 finished
       setAuctionStatus("Completed");
-      soundEngine.speakAnnouncement("The PSL 12 Auction has successfully concluded!");
+      soundEngine.speakAnnouncement("The PSL Mock Auction has successfully concluded!");
       addLog("admin", "Auction completed. All players processed.");
     }
   }, [currentPlayerIndex, players, auctionStatus, settings.defaultTimerSeconds]);
 
-  // Navigate to Previous Player
   const goToPreviousPlayer = () => {
     if (currentPlayerIndex > 0) {
       setCurrentBids([]);
@@ -398,25 +474,16 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   }, [isTimerRunning, auctionStatus, finalizePlayer]);
 
-  // Real-time automatic skip/out rule check (FR-09)
-  // Check if all non-leading franchises have withdrawn
+  // Real-time automatic skip/out rule check (Custom Mock Rule Section 13)
   useEffect(() => {
     if (auctionStatus !== "Live" || !isTimerRunning || !currentPlayer) return;
 
     const currentLeadingFranchiseId = highestBid ? highestBid.franchiseId : null;
     const eligibleFranchises = franchises.filter((f) => {
-      // Filter out teams with full squad
       const teamSquad = players.filter((p) => p.soldToFranchiseId === f.id);
-      if (teamSquad.length >= f.maxSquadSize) return false;
-      // Filter out teams if overseas player limit reached
-      if (currentPlayer.isOverseas) {
-        const osCount = teamSquad.filter((p) => p.isOverseas).length;
-        if (osCount >= f.maxOverseas) return false;
-      }
-      return true;
+      return teamSquad.length < f.maxSquadSize;
     });
 
-    // Check statuses for eligible franchises
     let allOthersOut = true;
     for (const f of eligibleFranchises) {
       if (f.id === currentLeadingFranchiseId) continue;
@@ -428,15 +495,23 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     if (allOthersOut && eligibleFranchises.length > 0) {
-      // Automatic early finalization if all other franchises are OUT (FR-09)
       if (settings.autoSellOnAllOut) {
         finalizePlayer();
       }
     }
   }, [franchiseStatuses, auctionStatus, isTimerRunning, highestBid, currentPlayer, franchises, players, settings.autoSellOnAllOut, finalizePlayer]);
 
-  // Place a Bid (FR-07, FR-10)
-  const placeBid = (franchiseId: string, customAmount?: number): { success: boolean; message: string } => {
+  // Place a Bid with RBAC check: Only authenticated franchise owner can bid for their team!
+  const placeBid = (franchiseIdParam?: string, customAmount?: number): { success: boolean; message: string } => {
+    if (role === "spectator") {
+      return { success: false, message: "Spectator Mode: You are in read-only mode. Please login as a Team Owner to bid." };
+    }
+
+    const biddingFranchiseId = role === "team_owner" ? authenticatedFranchiseId : (franchiseIdParam || authenticatedFranchiseId);
+    if (!biddingFranchiseId) {
+      return { success: false, message: "No authorized franchise identified for this bid." };
+    }
+
     if (auctionStatus !== "Live") {
       return { success: false, message: "Auction is not live. Cannot place bid." };
     }
@@ -444,19 +519,17 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return { success: false, message: "No active player available for bidding." };
     }
 
-    const franchise = franchises.find((f) => f.id === franchiseId);
+    const franchise = franchises.find((f) => f.id === biddingFranchiseId);
     if (!franchise) {
       return { success: false, message: "Franchise not found." };
     }
 
-    // Check if franchise marked 'out'
-    if (franchiseStatuses[franchiseId] === "out") {
-      return { success: false, message: `${franchise.name} has already withdrawn (OUT) from this player.` };
+    if (franchiseStatuses[biddingFranchiseId] === "out") {
+      return { success: false, message: `${franchise.name} has permanently withdrawn (OUT) from this player.` };
     }
 
-    // Check if franchise is already highest bidder
-    if (highestBid && highestBid.franchiseId === franchiseId) {
-      return { success: false, message: `${franchise.name} is already the highest bidder!` };
+    if (highestBid && highestBid.franchiseId === biddingFranchiseId) {
+      return { success: false, message: `${franchise.name} already holds the highest bid!` };
     }
 
     const currentAmount = highestBid ? highestBid.amount : null;
@@ -467,7 +540,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ? currentAmount + minIncrement
       : currentPlayer.basePrice;
 
-    // Validate bid rules (Purse, squad limit, overseas limit, reserve purse)
+    // Validate bid with official PSL rules
     const validation = validateBid(
       proposedAmount,
       currentPlayer,
@@ -476,15 +549,13 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       players,
       settings.minSquadSize,
       settings.maxSquadSize,
-      settings.maxOverseas,
-      2500000
+      6000000 // 60L lowest base price
     );
 
     if (!validation.valid) {
       return { success: false, message: validation.reason || "Bid is invalid." };
     }
 
-    // Bid is valid!
     const newBid: Bid = {
       id: `bid-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       playerId: currentPlayer.id,
@@ -494,14 +565,13 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       timestamp: Date.now(),
     };
 
-    // Notify previous highest bidder
-    if (highestBid && highestBid.franchiseId !== franchiseId) {
+    if (highestBid && highestBid.franchiseId !== biddingFranchiseId) {
       soundEngine.playOutbidSound();
     } else {
       soundEngine.playBidSound();
     }
 
-    // Reset or extend timer (FR-08)
+    // Reset or extend timer (Section 12: 15s reset, +10s in final 5 seconds)
     setTimer((prev) => {
       if (prev <= settings.extensionTriggerSeconds) {
         return prev + settings.extensionSeconds;
@@ -509,9 +579,8 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return settings.timerResetSeconds;
     });
 
-    // Re-activate franchise if it was in 'skipped' state
-    if (franchiseStatuses[franchiseId] === "skipped") {
-      setFranchiseStatuses((prev) => ({ ...prev, [franchiseId]: "active" }));
+    if (franchiseStatuses[biddingFranchiseId] === "skipped") {
+      setFranchiseStatuses((prev) => ({ ...prev, [biddingFranchiseId]: "active" }));
     }
 
     setCurrentBids((prev) => [...prev, newBid]);
@@ -531,61 +600,55 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return { success: true, message: `Bid of PKR ${(proposedAmount / 10000000).toFixed(2)} Cr accepted for ${franchise.name}!` };
   };
 
-  // Franchise Skip / Pass (FR-09)
-  const skipCurrentPlayer = (franchiseId: string) => {
-    const f = franchises.find((team) => team.id === franchiseId);
+  const skipCurrentPlayer = (franchiseIdParam?: string) => {
+    const fId = role === "team_owner" ? authenticatedFranchiseId : (franchiseIdParam || authenticatedFranchiseId);
+    if (!fId) return;
+    const f = franchises.find((team) => team.id === fId);
     if (!f) return;
-    setFranchiseStatuses((prev) => ({ ...prev, [franchiseId]: "skipped" }));
+    setFranchiseStatuses((prev) => ({ ...prev, [fId]: "skipped" }));
     addLog("skip", `${f.name} passed/skipped bidding on ${currentPlayer?.name || "current player"}.`, {
-      franchiseId,
+      franchiseId: fId,
       franchiseName: f.name,
     });
   };
 
-  // Franchise Out (FR-09)
-  const outCurrentPlayer = (franchiseId: string) => {
-    // If team holds highest bid, they CANNOT withdraw (FR-09 constraint)
-    if (highestBid && highestBid.franchiseId === franchiseId) {
-      return;
-    }
-    const f = franchises.find((team) => team.id === franchiseId);
+  const outCurrentPlayer = (franchiseIdParam?: string) => {
+    const fId = role === "team_owner" ? authenticatedFranchiseId : (franchiseIdParam || authenticatedFranchiseId);
+    if (!fId) return;
+    if (highestBid && highestBid.franchiseId === fId) return; // Cannot withdraw leading bid!
+    const f = franchises.find((team) => team.id === fId);
     if (!f) return;
-    setFranchiseStatuses((prev) => ({ ...prev, [franchiseId]: "out" }));
+    setFranchiseStatuses((prev) => ({ ...prev, [fId]: "out" }));
     addLog("out", `${f.name} permanently withdrew (OUT) from ${currentPlayer?.name || "current player"}.`, {
-      franchiseId,
+      franchiseId: fId,
       franchiseName: f.name,
     });
   };
 
-  // Start Auction
   const startAuction = () => {
     setAuctionStatus("Live");
     setIsTimerRunning(true);
     setTimer(settings.defaultTimerSeconds);
-    addLog("start", "PSL 12 Mock Auction started!");
-    soundEngine.speakAnnouncement("The PSL 12 Live Auction is now open! Bidding has commenced.");
+    addLog("start", "Live Player Auction started!");
+    soundEngine.speakAnnouncement("The PSL Mock Auction is now live! Bidding has commenced.");
   };
 
-  // Pause Auction
   const pauseAuction = () => {
     setAuctionStatus("Paused");
     setIsTimerRunning(false);
     addLog("pause", "Auction paused by administrator.");
   };
 
-  // Resume Auction
   const resumeAuction = () => {
     setAuctionStatus("Live");
     setIsTimerRunning(true);
     addLog("resume", "Auction resumed by administrator.");
   };
 
-  // Start Round 2 for Unsold Players (FR-14)
   const startRoundTwo = () => {
     const unsoldPlayers = players.filter((p) => p.status === "unsold");
     if (unsoldPlayers.length === 0) return;
 
-    // Reset unsold players to upcoming with 20% discount or base price
     setPlayers((prev) =>
       prev.map((p) => {
         if (p.status === "unsold") {
@@ -601,7 +664,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       })
     );
 
-    // Point to first re-auction player
     const firstUnsoldIdx = players.findIndex((p) => p.status === "unsold");
     if (firstUnsoldIdx !== -1) {
       setCurrentPlayerIndex(firstUnsoldIdx);
@@ -613,10 +675,9 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsTimerRunning(true);
 
     addLog("round2", "Second Auction Round initiated for Unsold Players!");
-    soundEngine.speakAnnouncement("Second round of auction has commenced for unsold players!");
+    soundEngine.speakAnnouncement("Second auction round has commenced for unsold players!");
   };
 
-  // Reset entire auction
   const resetAuction = () => {
     setFranchises(INITIAL_FRANCHISES);
     setPlayers(INITIAL_PLAYERS);
@@ -634,7 +695,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Add individual player
   const addPlayer = (newPlayer: Partial<Player>) => {
     const id = `p-${Date.now()}`;
     const p: Player = {
@@ -648,23 +708,23 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       bowlingStyle: newPlayer.bowlingStyle || "Right-arm medium",
       primaryRole: newPlayer.primaryRole || "Batter",
       category: newPlayer.category || "Gold",
-      basePrice: newPlayer.basePrice || 10000000,
-      currentPrice: newPlayer.basePrice || 10000000,
+      basePrice: newPlayer.basePrice || 11000000,
+      currentPrice: newPlayer.basePrice || 11000000,
       status: "upcoming",
       auctionRound: 1,
+      isUnder23: newPlayer.isUnder23 || (newPlayer.age ? newPlayer.age <= 23 : false),
+      isUncapped: newPlayer.isUncapped || false,
       stats: newPlayer.stats,
     };
     setPlayers((prev) => [...prev, p]);
     addLog("admin", `New player added: ${p.name} (${p.category})`);
   };
 
-  // Import batch of players
   const importPlayersList = (newPlayers: Player[]) => {
     setPlayers((prev) => [...prev, ...newPlayers]);
     addLog("admin", `Successfully imported ${newPlayers.length} players into auction database.`);
   };
 
-  // Player Retention (FR-15)
   const retainPlayer = (franchiseId: string, playerId: string, price: number) => {
     const franchise = franchises.find((f) => f.id === franchiseId);
     const player = players.find((p) => p.id === playerId);
@@ -699,7 +759,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  // Direct Player Signing (FR-15)
   const directSignPlayer = (franchiseId: string, playerId: string, price: number) => {
     const franchise = franchises.find((f) => f.id === franchiseId);
     const player = players.find((p) => p.id === playerId);
@@ -734,7 +793,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  // Toggle Watchlist (FR-13)
   const toggleWatchlist = (
     franchiseId: string,
     playerId: string,
@@ -751,7 +809,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  // Save Playing XI (FR-12)
   const savePlayingXI = (franchiseId: string, playerIds: string[], captainId?: string, viceCaptainId?: string) => {
     setFranchises((prev) =>
       prev.map((f) =>
@@ -767,7 +824,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
   };
 
-  // Trade management (FR-16)
   const proposeTrade = (tradeData: Omit<TradeOffer, "id" | "createdAt" | "status">) => {
     const newOffer: TradeOffer = {
       ...tradeData,
@@ -785,7 +841,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (t.id !== tradeId) return t;
 
         if (action === "admin_approve" || (action === "accept" && t.status === "pending")) {
-          // Execute swap of players
           if (t.offeredPlayerId && t.requestedPlayerId) {
             setPlayers((playersList) =>
               playersList.map((p) => {
@@ -795,7 +850,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
               })
             );
           }
-          // Cash transfer
           if (t.offeredCash) {
             setFranchises((franchiseList) =>
               franchiseList.map((f) => {
@@ -817,20 +871,17 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setSettings((prev) => ({ ...prev, ...newSettings }));
   };
 
-  const updateFranchisePurse = (franchiseId: string, newPurse: number) => {
-    setFranchises((prev) =>
-      prev.map((f) => (f.id === franchiseId ? { ...f, remainingPurse: newPurse } : f))
-    );
-  };
-
   return (
     <AuctionContext.Provider
       value={{
         role,
-        setRole,
-        selectedFranchiseId,
-        setSelectedFranchiseId,
+        authenticatedFranchiseId,
         activeFranchise,
+        loginAsAdmin,
+        loginAsTeamOwner,
+        logoutToSpectator,
+        rulePreset,
+        setRulePreset,
         auctionStatus,
         franchises,
         players,
@@ -866,7 +917,6 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         proposeTrade,
         handleTradeAction,
         updateSettings,
-        updateFranchisePurse,
       }}
     >
       {children}

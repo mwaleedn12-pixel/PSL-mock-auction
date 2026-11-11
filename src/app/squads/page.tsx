@@ -13,18 +13,25 @@ import {
   CheckCircle,
   AlertCircle,
   Sparkles,
+  Lock,
 } from "lucide-react";
 
 export default function SquadsPage() {
   const {
+    role,
+    authenticatedFranchiseId,
+    activeFranchise,
     franchises,
-    selectedFranchiseId,
-    setSelectedFranchiseId,
     players,
     savePlayingXI,
   } = useAuction();
 
-  const [activeTeamId, setActiveTeamId] = useState<string>(selectedFranchiseId || "lq");
+  // If team owner, default to their own team
+  const defaultTeamId = (role === "team_owner" && authenticatedFranchiseId)
+    ? authenticatedFranchiseId
+    : franchises[0]?.id || "iu";
+
+  const [activeTeamId, setActiveTeamId] = useState<string>(defaultTeamId);
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [originFilter, setOriginFilter] = useState<string>("all");
   const [isXIModalOpen, setIsXIModalOpen] = useState(false);
@@ -36,11 +43,16 @@ export default function SquadsPage() {
     if (roleFilter !== "all" && p.primaryRole !== roleFilter) return false;
     if (originFilter === "domestic" && p.isOverseas) return false;
     if (originFilter === "overseas" && !p.isOverseas) return false;
+    if (originFilter === "u23" && (!p.isUnder23 || !p.isUncapped)) return false;
     return true;
   });
 
   const overseasCount = squad.filter((p) => p.isOverseas).length;
+  const u23UncappedSquad = squad.filter((p) => p.isUnder23 && p.isUncapped).length;
   const playingXICount = currentFranchise.playingXI?.length || 0;
+
+  // Permission check: only admin or the specific team owner can edit playing XI
+  const canEditPlayingXI = role === "admin" || (role === "team_owner" && authenticatedFranchiseId === currentFranchise.id);
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
@@ -51,42 +63,52 @@ export default function SquadsPage() {
             <Users className="w-7 h-7 text-emerald-400" /> Squad Management & Playing XI
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Build and inspect rosters, playing XI combinations, leadership, and overseas quotas for all 6 PSL teams.
+            Section 6 & 7: Official roster size (16-20), overseas allocation (5-7), and Under-23 player mandates.
           </p>
         </div>
 
-        <button
-          onClick={() => setIsXIModalOpen(true)}
-          className="px-5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-colors shadow-lg shadow-emerald-500/20"
-        >
-          <Sparkles className="w-4 h-4" /> Edit Playing XI ({playingXICount}/11)
-        </button>
+        {canEditPlayingXI ? (
+          <button
+            onClick={() => setIsXIModalOpen(true)}
+            className="px-5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-colors shadow-lg shadow-emerald-500/20"
+          >
+            <Sparkles className="w-4 h-4" /> Manage Playing XI ({playingXICount}/11)
+          </button>
+        ) : (
+          <span className="text-xs text-slate-500 flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl">
+            <Lock className="w-3.5 h-3.5 text-slate-400" /> Playing XI editing locked to team owner
+          </span>
+        )}
       </div>
 
       {/* Franchise Selector Pills */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
         {franchises.map((f) => {
           const isActive = f.id === activeTeamId;
+          const isMyTeam = role === "team_owner" && authenticatedFranchiseId === f.id;
           const teamSquad = players.filter((p) => p.soldToFranchiseId === f.id);
+
           return (
             <button
               key={f.id}
-              onClick={() => {
-                setActiveTeamId(f.id);
-                setSelectedFranchiseId(f.id);
-              }}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black whitespace-nowrap transition-all border ${
+              onClick={() => setActiveTeamId(f.id)}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs font-black whitespace-nowrap transition-all border ${
                 isActive
                   ? "bg-slate-900 text-white border-emerald-500 shadow-md shadow-emerald-500/20"
                   : "bg-slate-950/60 text-slate-400 border-slate-800 hover:border-slate-700"
               }`}
             >
               <span
-                className="w-3 h-3 rounded-full"
+                className="w-2.5 h-2.5 rounded-full"
                 style={{ backgroundColor: f.primaryColor }}
               />
-              <span>{f.shortName} - {f.name}</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-mono">
+              <span>{f.shortName}</span>
+              {isMyTeam && (
+                <span className="text-[9px] bg-emerald-500 text-slate-950 px-1 rounded font-black">
+                  YOU
+                </span>
+              )}
+              <span className="text-[10px] px-1.5 rounded bg-slate-800 text-slate-300 font-mono">
                 {teamSquad.length}
               </span>
             </button>
@@ -104,11 +126,20 @@ export default function SquadsPage() {
             {currentFranchise.shortName}
           </div>
           <div>
-            <h2 className="text-xl font-black text-white">{currentFranchise.name}</h2>
-            <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-black text-white">{currentFranchise.name}</h2>
+              {role === "team_owner" && authenticatedFranchiseId === currentFranchise.id && (
+                <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  Your Team
+                </span>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-1">
               <span>Squad: <strong className="text-white">{squad.length} / {currentFranchise.maxSquadSize}</strong></span>
               <span>•</span>
-              <span>Overseas: <strong className="text-blue-400">{overseasCount} / {currentFranchise.maxOverseas}</strong></span>
+              <span>Overseas: <strong className="text-blue-400">{overseasCount} / {currentFranchise.maxOverseas} max</strong></span>
+              <span>•</span>
+              <span>Uncapped U-23: <strong className={u23UncappedSquad >= 2 ? "text-emerald-400" : "text-amber-400"}>{u23UncappedSquad} / 2 min</strong></span>
               <span>•</span>
               <span>Purse Left: <strong className="text-amber-400">{formatPKR(currentFranchise.remainingPurse)}</strong></span>
             </div>
@@ -139,9 +170,10 @@ export default function SquadsPage() {
               onChange={(e) => setOriginFilter(e.target.value)}
               className="bg-transparent text-slate-200 focus:outline-none cursor-pointer"
             >
-              <option value="all" className="bg-slate-900">All Origins</option>
+              <option value="all" className="bg-slate-900">All Players</option>
               <option value="domestic" className="bg-slate-900">Domestic (Pakistan)</option>
               <option value="overseas" className="bg-slate-900">Overseas</option>
+              <option value="u23" className="bg-slate-900">Uncapped Under-23</option>
             </select>
           </div>
         </div>
@@ -152,7 +184,7 @@ export default function SquadsPage() {
         {filteredSquad.length === 0 ? (
           <div className="col-span-full text-center py-12 text-slate-500 bg-slate-900/40 border border-slate-800 rounded-3xl">
             <Users className="w-10 h-10 mx-auto mb-2 text-slate-700" />
-            <p className="font-semibold text-sm">No players found matching current filters</p>
+            <p className="font-semibold text-sm">No players acquired yet matching current filter</p>
           </div>
         ) : (
           filteredSquad.map((player) => {
@@ -205,13 +237,18 @@ export default function SquadsPage() {
                 </div>
 
                 <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                  <span className="text-slate-400">
+                  <div className="flex items-center gap-1.5">
                     {player.isOverseas ? (
                       <span className="text-blue-400 font-semibold">✈ {player.nationality}</span>
                     ) : (
                       <span className="text-emerald-400 font-semibold">Local</span>
                     )}
-                  </span>
+                    {player.isUnder23 && player.isUncapped && (
+                      <span className="text-[10px] font-bold px-1 rounded bg-emerald-500/20 text-emerald-300">
+                        U23
+                      </span>
+                    )}
+                  </div>
                   <span className="font-mono font-bold text-amber-400">
                     {formatPKR(player.soldPrice || player.basePrice)}
                   </span>

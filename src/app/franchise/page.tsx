@@ -4,42 +4,47 @@ import React, { useState } from "react";
 import { useAuction } from "@/context/AuctionContext";
 import { formatPKR } from "@/lib/rules";
 import { PlayingXIModal } from "@/components/PlayingXIModal";
+import { AuthModal } from "@/components/AuthModal";
 import {
   Shield,
   Coins,
   Users,
   Award,
   Globe,
-  Plus,
   Trash2,
-  FileText,
-  Star,
   Bookmark,
-  CheckCircle2,
-  AlertTriangle,
-  Play,
+  LogIn,
 } from "lucide-react";
 
 export default function FranchiseDashboardPage() {
   const {
+    role,
     activeFranchise,
-    franchises,
-    selectedFranchiseId,
-    setSelectedFranchiseId,
     players,
     watchlists,
     toggleWatchlist,
     savePlayingXI,
-    settings,
   } = useAuction();
 
   const [isXIModalOpen, setIsXIModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"squad" | "watchlist">("squad");
 
-  if (!activeFranchise) {
+  if (role !== "team_owner" || !activeFranchise) {
     return (
-      <div className="text-center py-12 text-slate-400">
-        <p>No franchise selected. Please choose a franchise from the top bar.</p>
+      <div className="max-w-md mx-auto my-16 bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center shadow-2xl">
+        <Shield className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
+        <h2 className="text-xl font-black text-white">Team Owner Login Required</h2>
+        <p className="text-xs text-slate-400 mt-2">
+          To access your private franchise dashboard, purse ledgers, and team strategy watchlist, enter your team passkey provided by the Administrator.
+        </p>
+        <button
+          onClick={() => setIsAuthModalOpen(true)}
+          className="mt-6 w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-colors shadow-lg shadow-emerald-500/25"
+        >
+          Login with Team Passkey
+        </button>
+        <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
       </div>
     );
   }
@@ -47,21 +52,11 @@ export default function FranchiseDashboardPage() {
   const squad = players.filter((p) => p.soldToFranchiseId === activeFranchise.id);
   const localPlayers = squad.filter((p) => !p.isOverseas);
   const overseasPlayers = squad.filter((p) => p.isOverseas);
-
-  const batters = squad.filter((p) => p.primaryRole === "Batter");
-  const bowlers = squad.filter((p) => p.primaryRole === "Bowler");
-  const allRounders = squad.filter((p) => p.primaryRole === "All-Rounder");
-  const wicketKeepers = squad.filter((p) => p.primaryRole === "Wicketkeeper");
+  const u23Players = squad.filter((p) => p.isUnder23 && p.isUncapped);
 
   const totalSpent = activeFranchise.initialPurse - activeFranchise.remainingPurse;
   const spentPercent = (totalSpent / activeFranchise.initialPurse) * 100;
 
-  // Minimum Reserve Purse Needed to fill remaining slots (FR-10, FR-11)
-  const remainingSlotsNeeded = Math.max(0, activeFranchise.minSquadSize - squad.length);
-  const reservePurseNeeded = remainingSlotsNeeded * 2500000;
-  const availableBiddingPurse = Math.max(0, activeFranchise.remainingPurse - reservePurseNeeded);
-
-  // Watchlist items for this franchise
   const teamWatchlist = watchlists.filter((w) => w.franchiseId === activeFranchise.id);
 
   return (
@@ -87,16 +82,13 @@ export default function FranchiseDashboardPage() {
                   {activeFranchise.city}, Pakistan
                 </span>
                 <span className="text-slate-600">•</span>
-                <span className="text-xs text-emerald-400 font-semibold">PSL 12 Franchise</span>
+                <span className="text-xs text-emerald-400 font-semibold">Authenticated Franchise</span>
               </div>
               <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
                 {activeFranchise.name}
               </h1>
               <p className="text-xs text-slate-400 mt-1">
                 Owner: <strong className="text-slate-200">{activeFranchise.ownerName}</strong>
-                {activeFranchise.coOwnerName && (
-                  <> • Co-Owner: <strong className="text-slate-200">{activeFranchise.coOwnerName}</strong></>
-                )}
               </p>
             </div>
           </div>
@@ -111,7 +103,7 @@ export default function FranchiseDashboardPage() {
           </div>
         </div>
 
-        {/* Purse and Financial Metrics (FR-11) */}
+        {/* Purse Metrics */}
         <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-slate-950/70 p-4 rounded-2xl border border-slate-800">
             <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
@@ -123,7 +115,7 @@ export default function FranchiseDashboardPage() {
             <div className="w-full bg-slate-900 h-1.5 rounded-full mt-2 overflow-hidden">
               <div
                 className="h-full bg-amber-400 rounded-full"
-                style={{ width: `${100 - spentPercent}%` }}
+                style={{ width: `${Math.max(0, 100 - spentPercent)}%` }}
               />
             </div>
           </div>
@@ -134,13 +126,13 @@ export default function FranchiseDashboardPage() {
             </span>
             <p className="text-2xl font-black text-white mt-1">{formatPKR(totalSpent)}</p>
             <span className="text-[11px] text-slate-500 mt-1 block">
-              {spentPercent.toFixed(1)}% of total purse
+              {spentPercent.toFixed(1)}% of 45 Cr purse
             </span>
           </div>
 
           <div className="bg-slate-950/70 p-4 rounded-2xl border border-slate-800">
             <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-              Squad Quota
+              Squad Quota (16-20)
             </span>
             <p className="text-2xl font-black text-emerald-400 mt-1">
               {squad.length} / {activeFranchise.maxSquadSize}
@@ -152,39 +144,19 @@ export default function FranchiseDashboardPage() {
 
           <div className="bg-slate-950/70 p-4 rounded-2xl border border-slate-800">
             <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-              Overseas Quota
+              Under-23 Mandate (Min 2)
             </span>
-            <p className="text-2xl font-black text-blue-400 mt-1">
-              {overseasPlayers.length} / {activeFranchise.maxOverseas}
+            <p className={`text-2xl font-black mt-1 ${u23Players.length >= 2 ? "text-emerald-400" : "text-amber-400"}`}>
+              {u23Players.length} / 2
             </p>
             <span className="text-[11px] text-slate-500 mt-1 block">
-              {activeFranchise.maxOverseas - overseasPlayers.length} overseas slots open
+              Uncapped Under-23 condition
             </span>
           </div>
         </div>
       </div>
 
-      {/* Role Composition Pills */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
-          <span className="text-xs text-slate-400 font-semibold">🏏 Batters</span>
-          <span className="text-base font-black text-white">{batters.length}</span>
-        </div>
-        <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
-          <span className="text-xs text-slate-400 font-semibold">⚡ Bowlers</span>
-          <span className="text-base font-black text-white">{bowlers.length}</span>
-        </div>
-        <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
-          <span className="text-xs text-slate-400 font-semibold">🔥 All-Rounders</span>
-          <span className="text-base font-black text-white">{allRounders.length}</span>
-        </div>
-        <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
-          <span className="text-xs text-slate-400 font-semibold">🧤 Wicketkeepers</span>
-          <span className="text-base font-black text-white">{wicketKeepers.length}</span>
-        </div>
-      </div>
-
-      {/* Tabs: My Squad vs Watchlist */}
+      {/* Tabs: Official Squad vs Private Watchlist */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl">
         <div className="flex items-center gap-4 border-b border-slate-800 pb-3 mb-6">
           <button
@@ -195,7 +167,7 @@ export default function FranchiseDashboardPage() {
                 : "border-transparent text-slate-400 hover:text-white"
             }`}
           >
-            Official Squad ({squad.length})
+            My Squad ({squad.length})
           </button>
           <button
             onClick={() => setActiveTab("watchlist")}
@@ -205,18 +177,17 @@ export default function FranchiseDashboardPage() {
                 : "border-transparent text-slate-400 hover:text-white"
             }`}
           >
-            Private Watchlist ({teamWatchlist.length})
+            Private Strategy Watchlist ({teamWatchlist.length})
           </button>
         </div>
 
-        {/* Squad Tab */}
         {activeTab === "squad" && (
           <div className="overflow-x-auto">
             {squad.length === 0 ? (
               <div className="text-center py-12 text-slate-500">
                 <Users className="w-10 h-10 mx-auto mb-2 text-slate-700" />
                 <p className="font-semibold text-sm">No players acquired yet</p>
-                <p className="text-xs mt-1">Participate in live auction bidding to build your PSL 12 squad!</p>
+                <p className="text-xs mt-1">Place bids in the Live Arena to acquire your PSL squad.</p>
               </div>
             ) : (
               <table className="w-full text-left text-xs">
@@ -275,14 +246,13 @@ export default function FranchiseDashboardPage() {
           </div>
         )}
 
-        {/* Watchlist Tab (FR-13) */}
         {activeTab === "watchlist" && (
           <div className="space-y-3">
             {teamWatchlist.length === 0 ? (
               <div className="text-center py-12 text-slate-500">
                 <Bookmark className="w-10 h-10 mx-auto mb-2 text-slate-700" />
                 <p className="font-semibold text-sm">Your private watchlist is empty</p>
-                <p className="text-xs mt-1">Browse the Player Database and star targets to track max bids and private strategy notes!</p>
+                <p className="text-xs mt-1">Browse the Player Centre and star targets with max bids and private notes.</p>
               </div>
             ) : (
               teamWatchlist.map((item) => {
@@ -313,27 +283,16 @@ export default function FranchiseDashboardPage() {
                           Base Price: {formatPKR(targetPlayer.basePrice)} • Status:{" "}
                           <span className="capitalize font-semibold text-emerald-400">{targetPlayer.status}</span>
                         </p>
-                        {item.notes && (
-                          <p className="text-xs text-amber-300/90 mt-1 italic">
-                            Strategy Note: &ldquo;{item.notes}&rdquo;
-                          </p>
-                        )}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <span className="text-[10px] text-slate-500 block uppercase font-bold">Priority</span>
-                        <span className="text-xs font-black text-amber-400">{item.priority || "Medium"}</span>
-                      </div>
-                      <button
-                        onClick={() => toggleWatchlist(activeFranchise.id, targetPlayer.id)}
-                        className="p-2 text-slate-500 hover:text-red-400 rounded-lg hover:bg-slate-900 transition-colors"
-                        title="Remove from Watchlist"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => toggleWatchlist(activeFranchise.id, targetPlayer.id)}
+                      className="p-2 text-slate-500 hover:text-red-400 rounded-lg hover:bg-slate-900 transition-colors"
+                      title="Remove from Watchlist"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 );
               })
@@ -342,7 +301,6 @@ export default function FranchiseDashboardPage() {
         )}
       </div>
 
-      {/* Playing XI Modal */}
       <PlayingXIModal
         franchise={activeFranchise}
         allPlayers={players}
