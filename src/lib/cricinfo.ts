@@ -72,24 +72,10 @@ const CRICINFO_PROFILE_MAP: Record<string, string> = {
 };
 
 /**
- * Returns a search-assisted ESPNcricinfo URL for a player.
- * 
- * WHY ROUTE VIA GOOGLE SEARCH:
- * ESPNcricinfo is protected by Akamai EdgeSuite CDN WAF.
- * Direct third-party hotlinks (especially from localhost or external apps)
- * trigger Akamai's anti-scraping gate:
- * "Access Denied: You don't have permission to access 'http://www.espncricinfo.com/...' on this server.
- * Reference #... https://errors.edgesuite.net/..."
- * 
- * Routing the profile link through Google Search ("https://www.google.com/search?q=[Name]+espncricinfo+profile")
- * passes legitimate search referral headers and cookies, enabling the user to open
- * and view the player's ESPNcricinfo profile directly without getting blocked by Akamai.
+ * Returns the verified ESPNcricinfo profile URL for a player,
+ * or falls back to an exact ESPNcricinfo search query.
  */
 export function getCricinfoUrl(player: Player): string {
-  return `https://www.google.com/search?q=${encodeURIComponent(player.name + " espncricinfo profile")}`;
-}
-
-export function getDirectCricinfoUrl(player: Player): string {
   if (player.cricinfoUrl && player.cricinfoUrl.trim().length > 0) {
     return player.cricinfoUrl;
   }
@@ -99,4 +85,3 @@ export function getDirectCricinfoUrl(player: Player): string {
   }
   return `https://www.espncricinfo.com/search?q=${encodeURIComponent(player.name)}`;
 }
-
