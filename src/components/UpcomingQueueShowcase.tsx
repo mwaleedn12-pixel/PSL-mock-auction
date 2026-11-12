@@ -5,7 +5,6 @@ import { useAuction } from "@/context/AuctionContext";
 import { formatPKR } from "@/lib/rules";
 import { Player } from "@/types/auction";
 import {
-  Shirt,
   Activity,
   Flame,
   Globe,
@@ -100,22 +99,6 @@ export const UpcomingQueueShowcase: React.FC = () => {
                       className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-90" />
-
-                    {/* Kit Indicator Badge */}
-                    <div className="absolute top-2 left-2 right-2">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider backdrop-blur-md border shadow ${
-                          player.hasPlayedPSL
-                            ? "bg-amber-500/30 text-amber-300 border-amber-500/50"
-                            : "bg-blue-500/30 text-blue-300 border-blue-500/50"
-                        }`}
-                      >
-                        <Shirt className="w-2.5 h-2.5" />
-                        <span className="truncate">
-                          {player.hasPlayedPSL ? `PSL: ${player.lastPSLTeam}` : "T20 International Kit"}
-                        </span>
-                      </span>
-                    </div>
 
                     {/* Watchlist Star button */}
                     {activeFranchise && (

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from "react";
@@ -41,8 +42,8 @@ export const BidControls: React.FC = () => {
     role === "team_owner"
       ? activeFranchise
       : role === "admin"
-      ? franchises.find((f) => f.id === adminSelectedTeamId)
-      : undefined;
+        ? franchises.find((f) => f.id === adminSelectedTeamId)
+        : undefined;
 
   // Spectator View
   if (role === "spectator" || !currentActingFranchise) {
@@ -186,15 +187,14 @@ export const BidControls: React.FC = () => {
         <button
           disabled={auctionStatus !== "Live" || !isTimerRunning || isOut || isLeading}
           onClick={() => handlePlaceBid(nextBidAmount)}
-          className={`w-full py-4 px-6 rounded-2xl font-black text-base uppercase tracking-wider flex items-center justify-between transition-all duration-200 shadow-xl ${
-            isLeading
+          className={`w-full py-4 px-6 rounded-2xl font-black text-base uppercase tracking-wider flex items-center justify-between transition-all duration-200 shadow-xl ${isLeading
               ? "bg-emerald-950/40 border border-emerald-500/40 text-emerald-400 cursor-not-allowed opacity-90"
               : isOut
-              ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"
-              : auctionStatus !== "Live" || !isTimerRunning
-              ? "bg-slate-800 text-slate-500 cursor-not-allowed"
-              : "bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 shadow-emerald-500/25 active:scale-[0.99]"
-          }`}
+                ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"
+                : auctionStatus !== "Live" || !isTimerRunning
+                  ? "bg-slate-800 text-slate-500 cursor-not-allowed"
+                  : "bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 shadow-emerald-500/25 active:scale-[0.99]"
+            }`}
         >
           <div className="flex items-center gap-2">
             <Gavel className="w-5 h-5" />
@@ -202,8 +202,8 @@ export const BidControls: React.FC = () => {
               {isLeading
                 ? "You Hold Highest Bid"
                 : isOut
-                ? "Out from this Player"
-                : `Place Bid (${formatPKR(nextBidAmount)})`}
+                  ? "Out from this Player"
+                  : `Place Bid (${formatPKR(nextBidAmount)})`}
             </span>
           </div>
           {!isLeading && !isOut && auctionStatus === "Live" && (

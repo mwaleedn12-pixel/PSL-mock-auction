@@ -3,7 +3,7 @@
 import React from "react";
 import { Player } from "@/types/auction";
 import { formatPKR } from "@/lib/rules";
-import { Globe, UserCheck, Shield, Award, Flame, Activity, Shirt, Sparkles } from "lucide-react";
+import { Globe, UserCheck, Shield, Award, Flame, Activity, Sparkles } from "lucide-react";
 
 interface PlayerCardProps {
   player: Player | null;
@@ -132,22 +132,6 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
               className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-90" />
-
-            {/* Team Kit Badge Indicator */}
-            <div className="absolute top-2 left-2 right-2">
-              <span
-                className={`flex items-center justify-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black tracking-wider uppercase backdrop-blur-md border shadow ${
-                  player.hasPlayedPSL
-                    ? "bg-amber-500/30 text-amber-300 border-amber-500/50"
-                    : "bg-blue-500/30 text-blue-300 border-blue-500/50"
-                }`}
-              >
-                <Shirt className="w-3 h-3" />
-                {player.hasPlayedPSL
-                  ? `PSL Kit: ${player.lastPSLTeam || "Previous Franchise"}`
-                  : "T20 International / League Kit"}
-              </span>
-            </div>
 
             <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-center px-1">
               <span className="text-[11px] font-semibold text-slate-300 bg-slate-950/80 px-2 py-0.5 rounded-full border border-slate-800">
