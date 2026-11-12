@@ -8,3 +8,4 @@
 > 4. Assign their verified PSL career stats (if they previously played in PSL) or overall T20 career stats (if debutant).
 > 5. Link their official **ESPNcricinfo** player profile so that clicking their player card in the UI directly opens their ESPNcricinfo page.
 > 6. Add them to the active players database in `src/data/initialPlayers.ts` and auction pool state.
+
