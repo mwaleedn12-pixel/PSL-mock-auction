@@ -94,6 +94,9 @@ export const UpcomingQueueShowcase: React.FC = () => {
                     <img
                       src={player.photoUrl}
                       alt={player.name}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://images.icc-cricket.com/image/upload/t_player-headshot-portrait-lg-webp/prd/assets/players/generic/colored/69957.png";
+                      }}
                       className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-90" />

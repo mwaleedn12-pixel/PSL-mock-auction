@@ -7,7 +7,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p1",
     name: "Babar Azam",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p1.jpg",
     nationality: "Pakistan",
     isOverseas: false,
     age: 30,
@@ -39,7 +39,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p2",
     name: "Shaheen Shah Afridi",
-    photoUrl: "https://images.unsplash.com/photo-1531415074868-036b107e775a?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p2.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 24,
@@ -71,7 +71,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p3",
     name: "Mohammad Rizwan",
-    photoUrl: "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p3.jpg",
     nationality: "Pakistan",
     isOverseas: false,
     age: 32,
@@ -104,7 +104,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p4",
     name: "Shadab Khan",
-    photoUrl: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p4.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 26,
@@ -137,7 +137,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p5",
     name: "Naseem Shah",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p5.jpg",
     nationality: "Pakistan",
     isOverseas: false,
     age: 21,
@@ -167,7 +167,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p6",
     name: "Fakhar Zaman",
-    photoUrl: "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p6.jpg",
     nationality: "Pakistan",
     isOverseas: false,
     age: 34,
@@ -199,7 +199,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p7",
     name: "Haris Rauf",
-    photoUrl: "https://images.unsplash.com/photo-1531415074868-036b107e775a?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p7.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 31,
@@ -229,7 +229,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p8",
     name: "Iftikhar Ahmed",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p8.jpg",
     nationality: "Pakistan",
     isOverseas: false,
     age: 34,
@@ -260,7 +260,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p9",
     name: "Usama Mir",
-    photoUrl: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p9.jpg",
     nationality: "Pakistan",
     isOverseas: false,
     age: 28,
@@ -290,7 +290,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p10",
     name: "Rashid Khan",
-    photoUrl: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p10.jpg",
     nationality: "Afghanistan",
     isOverseas: true,
     age: 26,
@@ -322,7 +322,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p11",
     name: "David Miller",
-    photoUrl: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p11.png",
     nationality: "South Africa",
     isOverseas: true,
     age: 35,
@@ -353,7 +353,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p12",
     name: "Rassie van der Dussen",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p12.png",
     nationality: "South Africa",
     isOverseas: true,
     age: 35,
@@ -389,7 +389,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p13",
     name: "Saim Ayub",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p13.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 22,
@@ -421,7 +421,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p14",
     name: "Mohammad Amir",
-    photoUrl: "https://images.unsplash.com/photo-1531415074868-036b107e775a?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p14.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 32,
@@ -451,7 +451,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p15",
     name: "Imad Wasim",
-    photoUrl: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p15.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 35,
@@ -484,7 +484,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p16",
     name: "Azam Khan",
-    photoUrl: "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p16.jpg",
     nationality: "Pakistan",
     isOverseas: false,
     age: 26,
@@ -516,7 +516,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p17",
     name: "Salman Ali Agha",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p17.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 31,
@@ -547,7 +547,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p18",
     name: "Usman Khan",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p18.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 29,
@@ -579,7 +579,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p19",
     name: "Khushdil Shah",
-    photoUrl: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p19.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 29,
@@ -609,7 +609,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p20",
     name: "Mohammad Abbas Afridi",
-    photoUrl: "https://images.unsplash.com/photo-1531415074868-036b107e775a?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p20.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 23,
@@ -639,7 +639,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p21",
     name: "Mohammad Ali",
-    photoUrl: "https://images.unsplash.com/photo-1531415074868-036b107e775a?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p21.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 32,
@@ -669,7 +669,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p22",
     name: "Shan Masood",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p22.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 35,
@@ -700,7 +700,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p23",
     name: "Hasan Ali",
-    photoUrl: "https://images.unsplash.com/photo-1531415074868-036b107e775a?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p23.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 30,
@@ -730,7 +730,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p24",
     name: "Abdullah Shafique",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p24.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 24,
@@ -761,7 +761,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p25",
     name: "Sikandar Raza",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p25.jpg",
     nationality: "Zimbabwe",
     isOverseas: true,
     age: 38,
@@ -793,7 +793,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p26",
     name: "Rilee Rossouw",
-    photoUrl: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p26.png",
     nationality: "South Africa",
     isOverseas: true,
     age: 35,
@@ -825,7 +825,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p27",
     name: "Sherfane Rutherford",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p27.png",
     nationality: "West Indies",
     isOverseas: true,
     age: 26,
@@ -857,7 +857,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p28",
     name: "Rovman Powell",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p28.png",
     nationality: "West Indies",
     isOverseas: true,
     age: 31,
@@ -892,7 +892,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p29",
     name: "Mohammad Haris",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p29.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 23,
@@ -924,7 +924,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p30",
     name: "Aamer Jamal",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p30.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 28,
@@ -956,7 +956,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p31",
     name: "Zaman Khan",
-    photoUrl: "https://images.unsplash.com/photo-1531415074868-036b107e775a?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p31.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 23,
@@ -986,7 +986,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p32",
     name: "Shahnawaz Dahani",
-    photoUrl: "https://images.unsplash.com/photo-1531415074868-036b107e775a?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p32.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 26,
@@ -1016,7 +1016,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p33",
     name: "Ihsanullah",
-    photoUrl: "https://images.unsplash.com/photo-1531415074868-036b107e775a?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p33.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 22,
@@ -1046,7 +1046,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p34",
     name: "Tayyab Tahir",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p34.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 31,
@@ -1077,7 +1077,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p35",
     name: "Faheem Ashraf",
-    photoUrl: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p35.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 30,
@@ -1110,7 +1110,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p36",
     name: "Kamran Ghulam",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p36.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 29,
@@ -1141,7 +1141,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p37",
     name: "Mir Hamza",
-    photoUrl: "https://images.unsplash.com/photo-1531415074868-036b107e775a?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p37.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 32,
@@ -1171,7 +1171,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p38",
     name: "Mohammad Wasim Jnr",
-    photoUrl: "https://images.unsplash.com/photo-1531415074868-036b107e775a?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p38.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 23,
@@ -1202,7 +1202,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p39",
     name: "Sarfaraz Ahmed",
-    photoUrl: "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p39.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 37,
@@ -1238,7 +1238,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p40",
     name: "Rumman Raees",
-    photoUrl: "https://images.unsplash.com/photo-1531415074868-036b107e775a?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p40.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 33,
@@ -1268,7 +1268,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p41",
     name: "Arshad Iqbal",
-    photoUrl: "https://images.unsplash.com/photo-1531415074868-036b107e775a?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p41.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 23,
@@ -1298,7 +1298,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p42",
     name: "Arif Yaqoob",
-    photoUrl: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p42.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 29,
@@ -1328,7 +1328,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p43",
     name: "Mirza Tahir Baig",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p43.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 25,
@@ -1359,7 +1359,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p44",
     name: "Ali Majid",
-    photoUrl: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p44.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 31,
@@ -1389,7 +1389,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p45",
     name: "Akif Javed",
-    photoUrl: "https://images.unsplash.com/photo-1531415074868-036b107e775a?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p45.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 24,
@@ -1419,7 +1419,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p46",
     name: "Irfan Khan Niazi",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p46.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 22,
@@ -1454,7 +1454,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p47",
     name: "Yasir Khan",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p47.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 22,
@@ -1485,7 +1485,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p48",
     name: "Ubaid Shah",
-    photoUrl: "https://images.unsplash.com/photo-1531415074868-036b107e775a?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p48.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 19,
@@ -1515,7 +1515,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p49",
     name: "Hunain Shah",
-    photoUrl: "https://images.unsplash.com/photo-1531415074868-036b107e775a?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p49.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 21,
@@ -1545,7 +1545,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p50",
     name: "Jahandad Khan",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p50.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 21,
@@ -1577,7 +1577,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p51",
     name: "Mehran Mumtaz",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p51.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 21,
@@ -1607,7 +1607,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p52",
     name: "Khawaja Nafay",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p52.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 22,
@@ -1638,7 +1638,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p53",
     name: "Mohammad Zeeshan",
-    photoUrl: "https://images.unsplash.com/photo-1531415074868-036b107e775a?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p53.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 18,
@@ -1668,7 +1668,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p54",
     name: "Haseebullah Khan",
-    photoUrl: "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p54.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 21,
@@ -1700,7 +1700,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p55",
     name: "Arafat Minhas",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p55.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 19,
@@ -1731,7 +1731,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p56",
     name: "Faisal Akram",
-    photoUrl: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p56.png",
     nationality: "Pakistan",
     isOverseas: false,
     age: 21,
@@ -1761,7 +1761,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p57",
     name: "Shai Hope",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p57.png",
     nationality: "West Indies",
     isOverseas: true,
     age: 31,
@@ -1792,7 +1792,7 @@ export const INITIAL_PLAYERS: Player[] = [
   {
     id: "p58",
     name: "Tim David",
-    photoUrl: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&auto=format&fit=crop&q=80",
+    photoUrl: "/images/players/p58.png",
     nationality: "Australia",
     isOverseas: true,
     age: 28,
