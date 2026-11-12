@@ -3,7 +3,8 @@
 import React from "react";
 import { Player } from "@/types/auction";
 import { formatPKR } from "@/lib/rules";
-import { Globe, UserCheck, Shield, Award, Flame, Activity, Sparkles } from "lucide-react";
+import { Globe, UserCheck, Shield, Award, Flame, Activity, Sparkles, ExternalLink } from "lucide-react";
+import { getCricinfoUrl } from "@/lib/cricinfo";
 
 interface PlayerCardProps {
   player: Player | null;
@@ -118,9 +119,15 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
 
       {/* Main Player Visual & Bio */}
       <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-        {/* Photo Container with Kit Badge */}
+        {/* Photo Container with Kit Badge & Clickable ESPNcricinfo link */}
         <div className="md:col-span-5 flex flex-col items-center">
-          <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-2xl overflow-hidden border-2 border-slate-700 shadow-2xl bg-slate-950 group">
+          <a
+            href={getCricinfoUrl(player)}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Click to view ${player.name}'s official ESPNcricinfo profile`}
+            className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-2xl overflow-hidden border-2 border-slate-700 hover:border-emerald-500/80 shadow-2xl bg-slate-950 group cursor-pointer block transition-all"
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={player.photoUrl}
@@ -133,6 +140,13 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-90" />
 
+            {/* Hover overlay hint */}
+            <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+              <span className="bg-slate-900/90 text-emerald-400 border border-emerald-500/50 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-xl backdrop-blur-md">
+                <ExternalLink className="w-3.5 h-3.5" /> View ESPNcricinfo
+              </span>
+            </div>
+
             <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-center px-1">
               <span className="text-[11px] font-semibold text-slate-300 bg-slate-950/80 px-2 py-0.5 rounded-full border border-slate-800">
                 Age: {player.age} yrs
@@ -143,20 +157,29 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                 </span>
               )}
             </div>
-          </div>
+          </a>
         </div>
 
         {/* Player Details & Pricing */}
         <div className="md:col-span-7 flex flex-col justify-between h-full space-y-4">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
-              {player.name}
-              {player.isRetained && (
-                <span className="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/40 px-2 py-0.5 rounded font-bold">
-                  RETAINED
-                </span>
-              )}
-            </h2>
+            <a
+              href={getCricinfoUrl(player)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group/name inline-flex items-center gap-2 hover:text-emerald-400 transition-colors"
+              title={`View ${player.name} on ESPNcricinfo`}
+            >
+              <h2 className="text-2xl sm:text-3xl font-black text-white group-hover/name:text-emerald-300 tracking-tight flex items-center gap-2 transition-colors">
+                {player.name}
+                <ExternalLink className="w-4 h-4 text-slate-500 group-hover/name:text-emerald-400 transition-colors" />
+                {player.isRetained && (
+                  <span className="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/40 px-2 py-0.5 rounded font-bold">
+                    RETAINED
+                  </span>
+                )}
+              </h2>
+            </a>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-xs text-slate-400">
               <span>🏏 Batting: <strong className="text-slate-200">{player.battingStyle}</strong></span>
               <span>⚡ Bowling: <strong className="text-slate-200">{player.bowlingStyle}</strong></span>

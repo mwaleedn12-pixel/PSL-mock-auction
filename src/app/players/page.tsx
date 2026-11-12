@@ -4,6 +4,7 @@ import React, { useState, useRef } from "react";
 import { useAuction } from "@/context/AuctionContext";
 import { Player, PlayerCategory, PlayerRole } from "@/types/auction";
 import { formatPKR } from "@/lib/rules";
+import { getCricinfoUrl } from "@/lib/cricinfo";
 import { parseUploadedDocument, ExtractedPlayerRow } from "@/lib/documentParser";
 import {
   Database,
@@ -20,6 +21,7 @@ import {
   Trash2,
   Check,
   RefreshCw,
+  ExternalLink,
 } from "lucide-react";
 
 export default function PlayerCentrePage() {
@@ -302,8 +304,9 @@ export default function PlayerCentrePage() {
               return (
                 <div
                   key={player.id}
-                  onClick={() => setSelectedPlayer(player)}
-                  className="bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 rounded-2xl overflow-hidden shadow-md transition-all hover:scale-[1.02] cursor-pointer group flex flex-col justify-between"
+                  onClick={() => window.open(getCricinfoUrl(player), "_blank", "noopener,noreferrer")}
+                  className="bg-slate-900/80 border border-slate-800 hover:border-emerald-500/60 hover:shadow-lg hover:shadow-emerald-500/10 rounded-2xl overflow-hidden shadow-md transition-all hover:scale-[1.02] cursor-pointer group flex flex-col justify-between"
+                  title={`Click to view ${player.name}'s profile on ESPNcricinfo (opens in new tab)`}
                 >
                   <div>
                     <div className="relative h-44 w-full bg-slate-950 overflow-hidden">
@@ -345,7 +348,10 @@ export default function PlayerCentrePage() {
                       )}
 
                       <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-xs">
-                        <span className="font-black text-white text-sm">{player.name}</span>
+                        <span className="font-black text-white text-sm flex items-center gap-1 group-hover:text-emerald-300 transition-colors">
+                          {player.name}
+                          <ExternalLink className="w-3 h-3 text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </span>
                         <span className="text-[11px] text-slate-300 bg-slate-950/80 px-2 py-0.5 rounded-full border border-slate-800">
                           {player.primaryRole}
                         </span>

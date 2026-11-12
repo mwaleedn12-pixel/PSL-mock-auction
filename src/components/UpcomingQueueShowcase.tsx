@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useAuction } from "@/context/AuctionContext";
 import { formatPKR } from "@/lib/rules";
+import { getCricinfoUrl } from "@/lib/cricinfo";
 import { Player } from "@/types/auction";
 import {
   Activity,
@@ -13,6 +14,7 @@ import {
   Gavel,
   Bookmark,
   Users,
+  ExternalLink,
 } from "lucide-react";
 
 export const UpcomingQueueShowcase: React.FC = () => {
@@ -80,11 +82,14 @@ export const UpcomingQueueShowcase: React.FC = () => {
             const isWatchlisted =
               activeFranchise &&
               watchlists.some((w) => w.franchiseId === activeFranchise.id && w.playerId === player.id);
+            const profileUrl = getCricinfoUrl(player);
 
             return (
               <div
                 key={player.id}
-                className="bg-slate-950/70 border border-slate-800 hover:border-emerald-500/50 rounded-2xl overflow-hidden shadow-md transition-all hover:scale-[1.01] flex flex-col justify-between group"
+                onClick={() => window.open(profileUrl, "_blank", "noopener,noreferrer")}
+                className="bg-slate-950/70 border border-slate-800 hover:border-emerald-500/60 hover:shadow-lg hover:shadow-emerald-500/10 rounded-2xl overflow-hidden shadow-md transition-all hover:scale-[1.01] flex flex-col justify-between group cursor-pointer"
+                title={`Click to view ${player.name}'s ESPNcricinfo profile (opens in new tab)`}
               >
                 <div>
                   {/* Photo with Kit Badge */}
@@ -100,11 +105,17 @@ export const UpcomingQueueShowcase: React.FC = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-90" />
 
-                    {/* Watchlist Star button */}
-                    {activeFranchise && (
-                      <div className="absolute top-2 right-2">
+                    {/* Top Right: Watchlist + ESPN Badge */}
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                      <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-slate-950/90 text-emerald-400 border border-emerald-500/40 text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 backdrop-blur-md">
+                        <ExternalLink className="w-2.5 h-2.5" /> ESPN
+                      </span>
+                      {activeFranchise && (
                         <button
-                          onClick={() => toggleWatchlist(activeFranchise.id, player.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleWatchlist(activeFranchise.id, player.id);
+                          }}
                           className={`p-1.5 rounded-full backdrop-blur-md transition-colors ${
                             isWatchlisted
                               ? "bg-amber-500 text-slate-950"
@@ -113,12 +124,15 @@ export const UpcomingQueueShowcase: React.FC = () => {
                         >
                           <Bookmark className="w-3 h-3 fill-current" />
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
 
                     <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-xs">
                       <div>
-                        <h4 className="font-black text-white text-sm">{player.name}</h4>
+                        <h4 className="font-black text-white text-sm flex items-center gap-1 group-hover:text-emerald-300 transition-colors">
+                          {player.name}
+                          <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity text-emerald-400" />
+                        </h4>
                         <span className="text-[10px] text-slate-400">{player.primaryRole}</span>
                       </div>
                       <span className="text-[10px] font-black px-2 py-0.5 rounded bg-slate-900/90 text-amber-400 border border-slate-800">
@@ -202,7 +216,10 @@ export const UpcomingQueueShowcase: React.FC = () => {
                 <div className="p-3 pt-0">
                   {role === "admin" ? (
                     <button
-                      onClick={() => selectPlayerForAuction(player.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        selectPlayerForAuction(player.id);
+                      }}
                       className="w-full py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-500 hover:text-slate-950 text-slate-300 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1 transition-colors"
                     >
                       <Gavel className="w-3.5 h-3.5" /> Put on Block

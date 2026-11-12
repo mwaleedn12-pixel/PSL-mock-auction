@@ -55,6 +55,8 @@ export interface Player {
   statsType?: 'PSL' | 'T20';
   lastPSLTeam?: string;
   kitDescription?: string;
+  // ESPNcricinfo profile link
+  cricinfoUrl?: string;
 }
 
 export interface Franchise {
