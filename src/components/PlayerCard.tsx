@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Player } from "@/types/auction";
 import { formatPKR } from "@/lib/rules";
 import {
@@ -14,8 +14,9 @@ import {
   ExternalLink,
   Zap,
   TrendingUp,
+  Info,
 } from "lucide-react";
-import { getCricinfoUrl } from "@/lib/cricinfo";
+import { PlayerDetailModal } from "./PlayerDetailModal";
 
 interface PlayerCardProps {
   player: Player | null;
@@ -30,6 +31,8 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   winningFranchiseName,
   isLarge = true,
 }) => {
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
   if (!player) {
     return (
       <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 text-center text-slate-500 flex flex-col items-center justify-center min-h-[380px] shadow-2xl">
@@ -156,14 +159,13 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
 
       {/* Main Player Visual & Bio */}
       <div className="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-        {/* Photo Container: Clean Headshot without Top-Left Label, Clickable to ESPNcricinfo */}
+        {/* Photo Container: Clickable to In-App Profile & Authentic Stats Modal */}
         <div className="md:col-span-5 flex flex-col items-center">
-          <a
-            href={getCricinfoUrl(player)}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={`Click to view ${player.name}'s official ESPNcricinfo profile`}
-            className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-2xl overflow-hidden border-2 border-slate-700 hover:border-emerald-500 shadow-2xl bg-slate-950 group cursor-pointer block transition-all"
+          <button
+            type="button"
+            onClick={() => setIsProfileModalOpen(true)}
+            title={`Click to view ${player.name}'s verified career profile & authentic stats`}
+            className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-2xl overflow-hidden border-2 border-slate-700 hover:border-emerald-500 shadow-2xl bg-slate-950 group cursor-pointer block transition-all text-left"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -180,7 +182,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
             {/* Hover overlay hint */}
             <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
               <span className="bg-slate-900/90 text-emerald-400 border border-emerald-500/50 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-xl backdrop-blur-md">
-                <ExternalLink className="w-3.5 h-3.5" /> View ESPNcricinfo
+                <Info className="w-3.5 h-3.5" /> View Profile & Stats
               </span>
             </div>
 
@@ -194,29 +196,28 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                 </span>
               )}
             </div>
-          </a>
+          </button>
         </div>
 
         {/* Player Details & Pricing */}
         <div className="md:col-span-7 flex flex-col justify-between h-full space-y-4">
           <div>
-            <a
-              href={getCricinfoUrl(player)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group/name inline-flex items-center gap-2 hover:text-emerald-400 transition-colors"
-              title={`View ${player.name} on ESPNcricinfo`}
+            <button
+              type="button"
+              onClick={() => setIsProfileModalOpen(true)}
+              className="group/name inline-flex items-center gap-2 hover:text-emerald-400 transition-colors text-left"
+              title={`View ${player.name}'s verified career profile & stats`}
             >
               <h2 className="text-2xl sm:text-3xl font-black text-white group-hover/name:text-emerald-300 tracking-tight flex items-center gap-2 transition-colors">
                 {player.name}
-                <ExternalLink className="w-4 h-4 text-slate-500 group-hover/name:text-emerald-400 transition-colors" />
+                <Info className="w-4 h-4 text-emerald-400 opacity-80 group-hover/name:opacity-100 transition-opacity" />
                 {player.isRetained && (
                   <span className="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/40 px-2 py-0.5 rounded font-black">
                     RETAINED
                   </span>
                 )}
               </h2>
-            </a>
+            </button>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-xs text-slate-400">
               <span>🏏 Batting: <strong className="text-slate-200">{player.battingStyle}</strong></span>
               <span>⚡ Bowling: <strong className="text-slate-200">{player.bowlingStyle}</strong></span>
@@ -327,6 +328,11 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
           )}
         </div>
       </div>
+
+      {/* Verified Player Profile & Authentic Stats Modal */}
+      {isProfileModalOpen && (
+        <PlayerDetailModal player={player} onClose={() => setIsProfileModalOpen(false)} />
+      )}
     </div>
   );
 };

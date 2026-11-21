@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuction } from "@/context/AuctionContext";
 import { formatPKR, getNextMinimumIncrement } from "@/lib/rules";
 import {
@@ -13,6 +13,7 @@ import {
   Sparkles,
   Coins,
   Crown,
+  Clock,
 } from "lucide-react";
 
 export const RtmModal: React.FC = () => {
@@ -32,6 +33,27 @@ export const RtmModal: React.FC = () => {
 
   const [customRaiseAmount, setCustomRaiseAmount] = useState<number | "">("");
   const [raiseError, setRaiseError] = useState<string | null>(null);
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(30);
+
+  useEffect(() => {
+    if (!rtmState || !rtmState.active || !rtmState.expiresAt) return;
+
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((rtmState.expiresAt! - Date.now()) / 1000));
+      setRemainingSeconds(remaining);
+
+      if (remaining <= 0) {
+        clearInterval(interval);
+        if (rtmState.stage === "prompt_rtm") {
+          declineRtmInitial();
+        } else if (rtmState.stage === "rtm_decision") {
+          declineRtmFinal();
+        }
+      }
+    }, 250);
+
+    return () => clearInterval(interval);
+  }, [rtmState, declineRtmInitial, declineRtmFinal]);
 
   if (!rtmState || !rtmState.active) return null;
 
@@ -91,6 +113,35 @@ export const RtmModal: React.FC = () => {
               Cancel RTM (Admin Override)
             </button>
           )}
+        </div>
+
+        {/* 30-Second RTM Expiry Clock Bar */}
+        <div className="my-3 p-3.5 rounded-2xl bg-slate-950/90 border border-amber-500/40 relative z-10 shadow-lg">
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-amber-400 animate-spin" />
+              <span className="text-slate-300 font-black uppercase tracking-wider text-[11px]">RTM Decision Clock:</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`text-base font-mono font-black ${
+                remainingSeconds <= 5 ? "text-red-400 animate-pulse" : "text-amber-400"
+              }`}>
+                {remainingSeconds}s remaining
+              </span>
+              <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">(Auto-declines at 0s)</span>
+            </div>
+          </div>
+          {/* Progress Bar */}
+          <div className="mt-2.5 w-full h-2 bg-slate-800 rounded-full overflow-hidden p-0.5">
+            <div
+              className={`h-full rounded-full transition-all duration-300 ${
+                remainingSeconds <= 5
+                  ? "bg-red-500 animate-pulse shadow-lg shadow-red-500/50"
+                  : "bg-gradient-to-r from-amber-500 via-yellow-400 to-emerald-400"
+              }`}
+              style={{ width: `${Math.min(100, Math.max(0, (remainingSeconds / 30) * 100))}%` }}
+            />
+          </div>
         </div>
 
         {/* Player & Bidding Summary Card */}

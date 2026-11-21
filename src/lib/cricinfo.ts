@@ -71,6 +71,54 @@ const CRICINFO_PROFILE_MAP: Record<string, string> = {
   "faisal akram": "https://www.espncricinfo.com/cricketers/faisal-akram-1279092",
 };
 
+const CRICBUZZ_PROFILE_MAP: Record<string, string> = {
+  "babar azam": "https://www.cricbuzz.com/profiles/8359/babar-azam",
+  "shaheen shah afridi": "https://www.cricbuzz.com/profiles/10636/shaheen-afridi",
+  "shaheen afridi": "https://www.cricbuzz.com/profiles/10636/shaheen-afridi",
+  "mohammad rizwan": "https://www.cricbuzz.com/profiles/7909/mohammad-rizwan",
+  "shadab khan": "https://www.cricbuzz.com/profiles/11186/shadab-khan",
+  "naseem shah": "https://www.cricbuzz.com/profiles/13936/naseem-shah",
+  "fakhar zaman": "https://www.cricbuzz.com/profiles/9667/fakhar-zaman",
+  "haris rauf": "https://www.cricbuzz.com/profiles/13904/haris-rauf",
+  "saim ayub": "https://www.cricbuzz.com/profiles/10237/saim-ayub",
+  "mohammad amir": "https://www.cricbuzz.com/profiles/2258/mohammad-amir",
+  "imad wasim": "https://www.cricbuzz.com/profiles/1836/imad-wasim",
+  "azam khan": "https://www.cricbuzz.com/profiles/13941/azam-khan",
+  "david miller": "https://www.cricbuzz.com/profiles/2239/david-miller",
+  "rashid khan": "https://www.cricbuzz.com/profiles/10738/rashid-khan",
+  "david warner": "https://www.cricbuzz.com/profiles/1739/david-warner",
+  "moeen ali": "https://www.cricbuzz.com/profiles/8019/moeen-ali",
+  "hasan ali": "https://www.cricbuzz.com/profiles/10739/hasan-ali",
+  "rilee rossouw": "https://www.cricbuzz.com/profiles/1770/rilee-rossouw",
+  "tim david": "https://www.cricbuzz.com/profiles/13493/tim-david",
+  "shan masood": "https://www.cricbuzz.com/profiles/1979/shan-masood",
+  "sarfaraz ahmed": "https://www.cricbuzz.com/profiles/1722/sarfaraz-ahmed",
+  "faheem ashraf": "https://www.cricbuzz.com/profiles/11184/faheem-ashraf",
+  "iftikhar ahmed": "https://www.cricbuzz.com/profiles/10543/iftikhar-ahmed",
+  "usama mir": "https://www.cricbuzz.com/profiles/10544/usama-mir",
+  "mohammad haris": "https://www.cricbuzz.com/profiles/13938/mohammad-haris",
+  "zaman khan": "https://www.cricbuzz.com/profiles/14358/zaman-khan",
+  "shahnawaz dahani": "https://www.cricbuzz.com/profiles/14041/shahnawaz-dahani",
+  "aamer jamal": "https://www.cricbuzz.com/profiles/14357/aamer-jamal",
+  "sikandar raza": "https://www.cricbuzz.com/profiles/8733/sikandar-raza",
+  "sherfane rutherford": "https://www.cricbuzz.com/profiles/11543/sherfane-rutherford",
+  "rovman powell": "https://www.cricbuzz.com/profiles/10639/rovman-powell",
+  "shai hope": "https://www.cricbuzz.com/profiles/10006/shai-hope",
+  "rassie van der dussen": "https://www.cricbuzz.com/profiles/8786/rassie-van-der-dussen",
+  "abdullah shafique": "https://www.cricbuzz.com/profiles/13935/abdullah-shafique",
+  "salman ali agha": "https://www.cricbuzz.com/profiles/11185/salman-ali-agha",
+  "usman khan": "https://www.cricbuzz.com/profiles/14042/usman-khan",
+  "khushdil shah": "https://www.cricbuzz.com/profiles/11545/khushdil-shah",
+  "mohammad abbas afridi": "https://www.cricbuzz.com/profiles/13937/abbas-afridi",
+  "abbas afridi": "https://www.cricbuzz.com/profiles/13937/abbas-afridi",
+  "mohammad ali": "https://www.cricbuzz.com/profiles/14040/mohammad-ali",
+  "kamran ghulam": "https://www.cricbuzz.com/profiles/10542/kamran-ghulam",
+  "mir hamza": "https://www.cricbuzz.com/profiles/10541/mir-hamza",
+  "mohammad wasim": "https://www.cricbuzz.com/profiles/14039/mohammad-wasim",
+  "mohammad wasim jnr": "https://www.cricbuzz.com/profiles/14039/mohammad-wasim",
+  "rumman raees": "https://www.cricbuzz.com/profiles/10545/rumman-raees",
+};
+
 /**
  * Returns the verified ESPNcricinfo profile URL for a player,
  * or falls back to an exact ESPNcricinfo search query.
@@ -84,4 +132,16 @@ export function getCricinfoUrl(player: Player): string {
     return CRICINFO_PROFILE_MAP[key];
   }
   return `https://www.espncricinfo.com/search?q=${encodeURIComponent(player.name)}`;
+}
+
+/**
+ * Returns the 100% accessible Cricbuzz profile URL for a player,
+ * which is never blocked by Akamai EdgeSuite / Pakistani ISP WAFs.
+ */
+export function getCricbuzzUrl(player: Player): string {
+  const key = player.name.trim().toLowerCase();
+  if (CRICBUZZ_PROFILE_MAP[key]) {
+    return CRICBUZZ_PROFILE_MAP[key];
+  }
+  return `https://www.google.com/search?q=${encodeURIComponent(player.name + " cricketer profile cricbuzz")}`;
 }

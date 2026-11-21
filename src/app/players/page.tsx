@@ -6,6 +6,7 @@ import { Player, PlayerCategory, PlayerRole } from "@/types/auction";
 import { formatPKR } from "@/lib/rules";
 import { getCricinfoUrl } from "@/lib/cricinfo";
 import { parseUploadedDocument, ExtractedPlayerRow } from "@/lib/documentParser";
+import { PlayerDetailModal } from "@/components/PlayerDetailModal";
 import {
   Database,
   Search,
@@ -304,9 +305,9 @@ export default function PlayerCentrePage() {
               return (
                 <div
                   key={player.id}
-                  onClick={() => window.open(getCricinfoUrl(player), "_blank", "noopener,noreferrer")}
+                  onClick={() => setSelectedPlayer(player)}
                   className="bg-slate-900/80 border border-slate-800 hover:border-emerald-500/60 hover:shadow-lg hover:shadow-emerald-500/10 rounded-2xl overflow-hidden shadow-md transition-all hover:scale-[1.02] cursor-pointer group flex flex-col justify-between"
-                  title={`Click to view ${player.name}'s profile on ESPNcricinfo (opens in new tab)`}
+                  title={`Click to view ${player.name}'s verified career profile & authentic stats`}
                 >
                   <div>
                     <div className="relative h-44 w-full bg-slate-950 overflow-hidden">
@@ -707,6 +708,14 @@ export default function PlayerCentrePage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Verified Player Profile & Authentic Stats Modal */}
+      {selectedPlayer && (
+        <PlayerDetailModal
+          player={selectedPlayer}
+          onClose={() => setSelectedPlayer(null)}
+        />
       )}
     </div>
   );

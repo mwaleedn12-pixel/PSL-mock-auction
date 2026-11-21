@@ -126,6 +126,9 @@ export interface AuctionSettings {
   enableRTM: boolean;
   rtmCardsPerFranchise: number;
   scheduledStartTime?: string;
+  // Automated Bot Bidding (testing mode)
+  botBiddingEnabled?: boolean;
+  manualFranchiseId?: string; // defaults to 'iu' (Islamabad United)
 }
 
 export interface RtmState {
@@ -138,6 +141,7 @@ export interface RtmState {
   initialBidAmount: number;
   revisedBidAmount?: number;
   stage: 'prompt_rtm' | 'awaiting_raise' | 'rtm_decision';
+  expiresAt?: number; // timestamp when 30-sec RTM timer expires
 }
 
 export interface WatchlistItem {

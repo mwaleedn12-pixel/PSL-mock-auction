@@ -31,6 +31,7 @@ import {
   Shuffle,
   Users,
   RotateCcw,
+  Bot,
 } from "lucide-react";
 
 export default function LiveAuctionArenaPage() {
@@ -57,6 +58,8 @@ export default function LiveAuctionArenaPage() {
     reEnterUnsoldPlayers,
     shuffleUpcomingPlayers,
     resetAuction,
+    toggleBotBidding,
+    botBiddingEnabled,
     toggleWatchlist,
     watchlists,
     activeFranchise,
@@ -232,7 +235,9 @@ export default function LiveAuctionArenaPage() {
               </div>
               <p className="text-[11px] text-slate-400 mt-0.5">
                 {auctionStatus === "Live"
-                  ? "Live auction in progress! All bids and countdown tick in real-time synchronization across tabs."
+                  ? botBiddingEnabled
+                    ? "🤖 Bot Testing Mode Active: Other 7 franchises bid automatically. Islamabad United is manual for you to test!"
+                    : "Live auction in progress! All bids and countdown tick in real-time synchronization across tabs."
                   : auctionStatus === "Paused"
                   ? "Auction is currently paused. Click 'Resume Live Auction' to continue."
                   : "Auction is ready. Click 'Start Live Auction' to start bidding!"}
@@ -242,6 +247,22 @@ export default function LiveAuctionArenaPage() {
 
           {/* Action Control Buttons */}
           <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            {/* Bot Simulation Toggle */}
+            <button
+              onClick={toggleBotBidding}
+              className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold border transition-all ${
+                botBiddingEnabled
+                  ? "bg-purple-950/70 border-purple-500/60 text-purple-300 shadow-md shadow-purple-500/20"
+                  : "bg-slate-900 border-slate-700 text-slate-400 hover:text-white"
+              }`}
+              title="Toggle Automated AI Bidding for 7 teams (Islamabad United stays manual for you to test)"
+            >
+              <Bot className="w-4 h-4 text-purple-400" />
+              <span>
+                Bot Simulation: <strong className={botBiddingEnabled ? "text-purple-300" : "text-slate-400"}>{botBiddingEnabled ? "ON (7 Bots, IU Manual)" : "OFF"}</strong>
+              </span>
+            </button>
+
             {auctionStatus !== "Live" ? (
               <button
                 onClick={auctionStatus === "Paused" ? resumeAuction : startAuction}

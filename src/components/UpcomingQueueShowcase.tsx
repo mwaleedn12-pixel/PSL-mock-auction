@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { useAuction } from "@/context/AuctionContext";
 import { formatPKR } from "@/lib/rules";
-import { getCricinfoUrl } from "@/lib/cricinfo";
 import { Player } from "@/types/auction";
 import {
   Activity,
@@ -14,8 +13,10 @@ import {
   Gavel,
   Bookmark,
   Users,
+  Info,
   ExternalLink,
 } from "lucide-react";
+import { PlayerDetailModal } from "./PlayerDetailModal";
 
 export const UpcomingQueueShowcase: React.FC = () => {
   const {
@@ -29,6 +30,7 @@ export const UpcomingQueueShowcase: React.FC = () => {
   } = useAuction();
 
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedDetailPlayer, setSelectedDetailPlayer] = useState<Player | null>(null);
 
   const upcomingPlayers = players.filter((p) => p.status === "upcoming");
 
@@ -82,14 +84,13 @@ export const UpcomingQueueShowcase: React.FC = () => {
             const isWatchlisted =
               activeFranchise &&
               watchlists.some((w) => w.franchiseId === activeFranchise.id && w.playerId === player.id);
-            const profileUrl = getCricinfoUrl(player);
 
             return (
               <div
                 key={player.id}
-                onClick={() => window.open(profileUrl, "_blank", "noopener,noreferrer")}
+                onClick={() => setSelectedDetailPlayer(player)}
                 className="bg-slate-950/70 border border-slate-800 hover:border-emerald-500/60 hover:shadow-lg hover:shadow-emerald-500/10 rounded-2xl overflow-hidden shadow-md transition-all hover:scale-[1.01] flex flex-col justify-between group cursor-pointer"
-                title={`Click to view ${player.name}'s ESPNcricinfo profile (opens in new tab)`}
+                title={`Click to view ${player.name}'s verified profile & career stats`}
               >
                 <div>
                   {/* Photo with Kit Badge */}
@@ -105,10 +106,10 @@ export const UpcomingQueueShowcase: React.FC = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-90" />
 
-                    {/* Top Right: Watchlist + ESPN Badge */}
+                    {/* Top Right: Watchlist + Info Badge */}
                     <div className="absolute top-2 right-2 flex items-center gap-1.5">
                       <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-slate-950/90 text-emerald-400 border border-emerald-500/40 text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 backdrop-blur-md">
-                        <ExternalLink className="w-2.5 h-2.5" /> ESPN
+                        <Info className="w-2.5 h-2.5" /> Stats
                       </span>
                       {activeFranchise && (
                         <button
@@ -235,6 +236,14 @@ export const UpcomingQueueShowcase: React.FC = () => {
           })
         )}
       </div>
+
+      {/* Verified Profile & Stats Modal */}
+      {selectedDetailPlayer && (
+        <PlayerDetailModal
+          player={selectedDetailPlayer}
+          onClose={() => setSelectedDetailPlayer(null)}
+        />
+      )}
     </div>
   );
 };

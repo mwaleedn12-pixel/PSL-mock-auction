@@ -90,6 +90,8 @@ interface AuctionContextType {
   proposeTrade: (trade: Omit<TradeOffer, "id" | "createdAt" | "status">) => void;
   handleTradeAction: (tradeId: string, action: 'accept' | 'reject' | 'admin_approve' | 'cancel') => void;
   updateSettings: (newSettings: Partial<AuctionSettings>) => void;
+  toggleBotBidding: () => void;
+  botBiddingEnabled: boolean;
 }
 
 const DEFAULT_SETTINGS: AuctionSettings = {
@@ -121,6 +123,8 @@ const DEFAULT_SETTINGS: AuctionSettings = {
   enableRTM: true,
   rtmCardsPerFranchise: 2,
   scheduledStartTime: "",
+  botBiddingEnabled: true,
+  manualFranchiseId: "iu",
 };
 
 const STORAGE_KEY = "psl_12_mock_auction_state_v2";
@@ -688,6 +692,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
               highestBidderFranchiseName: finalBid.franchiseName,
               initialBidAmount: finalBid.amount,
               stage: "prompt_rtm",
+              expiresAt: Date.now() + 30000,
             };
             setRtmState(newRtm);
             soundEngine.playRtmAlert();
@@ -745,6 +750,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const nextState: RtmState = {
       ...rtmState,
       stage: "awaiting_raise",
+      expiresAt: Date.now() + 30000,
     };
     setRtmState(nextState);
     soundEngine.playRtmAlert();
@@ -801,6 +807,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ...rtmState,
       revisedBidAmount: newAmount,
       stage: "rtm_decision",
+      expiresAt: Date.now() + 30000,
     };
     setRtmState(nextState);
     soundEngine.playBidSound();
@@ -963,13 +970,13 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Place a Bid
   const placeBid = (franchiseIdParam?: string, customAmount?: number): { success: boolean; message: string } => {
-    if (role === "spectator") {
-      return { success: false, message: "Spectator Mode: You are in read-only mode. Please login as a Team Owner to bid." };
-    }
+    const biddingFranchiseId =
+      franchiseIdParam ||
+      (role === "team_owner" ? authenticatedFranchiseId : null) ||
+      (role === "admin" ? franchises[0]?.id : null);
 
-    const biddingFranchiseId = role === "team_owner" ? authenticatedFranchiseId : (franchiseIdParam || authenticatedFranchiseId);
     if (!biddingFranchiseId) {
-      return { success: false, message: "No authorized franchise identified for this bid." };
+      return { success: false, message: "Spectator Mode: You are in read-only mode. Please login or select a franchise to bid." };
     }
 
     if (auctionStatus !== "Live") {
@@ -1100,6 +1107,202 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
     broadcastSync({ franchiseStatuses: updatedStatuses });
   };
+
+  const toggleBotBidding = () => {
+    setSettings((prev) => {
+      const updated = { ...prev, botBiddingEnabled: !prev.botBiddingEnabled };
+      broadcastSync({ settings: updated });
+      return updated;
+    });
+  };
+
+  // --- Automated Bot Bidding Engine (Only Islamabad United is manual, 7 other franchises automated) ---
+  const botBiddingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (
+      auctionStatus !== "Live" ||
+      !isTimerRunning ||
+      settings.botBiddingEnabled === false ||
+      rtmState?.active ||
+      !currentPlayer ||
+      currentPlayer.status !== "upcoming"
+    ) {
+      if (botBiddingTimeoutRef.current) {
+        clearTimeout(botBiddingTimeoutRef.current);
+        botBiddingTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    // Do not bid if timer is about to run out (< 3 seconds)
+    if (timer <= 3) return;
+
+    // Pick a natural, human-like delay between 2200ms and 4800ms
+    const randomDelay = Math.floor(Math.random() * 2600) + 2200;
+
+    botBiddingTimeoutRef.current = setTimeout(() => {
+      if (
+        auctionStatus !== "Live" ||
+        !isTimerRunning ||
+        rtmState?.active ||
+        !currentPlayer ||
+        currentPlayer.status !== "upcoming"
+      ) {
+        return;
+      }
+
+      const manualTeamId = settings.manualFranchiseId || "iu";
+      const currentLeadingFranchiseId = highestBid ? highestBid.franchiseId : null;
+
+      // Eligible bot franchises (all except IU and current leader)
+      const eligibleBots = franchises.filter((f) => {
+        if (f.id === manualTeamId) return false;
+        if (f.id === currentLeadingFranchiseId) return false;
+        if (franchiseStatuses[f.id] === "out") return false;
+
+        const squad = players.filter((p) => p.soldToFranchiseId === f.id);
+        if (squad.length >= f.maxSquadSize) return false;
+
+        if (currentPlayer.isOverseas) {
+          const overseasSquad = squad.filter((p) => p.isOverseas);
+          if (overseasSquad.length >= f.maxOverseas) return false;
+        }
+
+        const minInc = highestBid ? getNextMinimumIncrement(highestBid.amount) : 0;
+        const proposed = highestBid ? highestBid.amount + minInc : currentPlayer.basePrice;
+        const slotsNeeded = Math.max(0, f.minSquadSize - squad.length - 1);
+        const reserveBudget = slotsNeeded * 6000000;
+        if (f.remainingPurse < proposed + reserveBudget) return false;
+
+        // Realistic valuation threshold
+        const maxValuationMultipliers: Record<string, number> = {
+          Platinum: 2.8,
+          Diamond: 2.2,
+          Gold: 1.8,
+          Silver: 1.5,
+          Emerging: 1.4,
+          Supplementary: 1.3,
+        };
+        const maxPrice = currentPlayer.basePrice * (maxValuationMultipliers[currentPlayer.category] || 1.8);
+        if (proposed > maxPrice) return false;
+
+        return true;
+      });
+
+      if (eligibleBots.length > 0) {
+        // Probability check so bots act realistically
+        const probMap: Record<string, number> = {
+          Platinum: 0.85,
+          Diamond: 0.75,
+          Gold: 0.65,
+          Silver: 0.50,
+          Emerging: 0.45,
+          Supplementary: 0.40,
+        };
+        const prob = probMap[currentPlayer.category] || 0.60;
+        if (Math.random() < prob) {
+          const chosenBot = eligibleBots[Math.floor(Math.random() * eligibleBots.length)];
+          placeBid(chosenBot.id);
+        }
+      }
+    }, randomDelay);
+
+    return () => {
+      if (botBiddingTimeoutRef.current) {
+        clearTimeout(botBiddingTimeoutRef.current);
+      }
+    };
+  }, [
+    auctionStatus,
+    isTimerRunning,
+    settings.botBiddingEnabled,
+    settings.manualFranchiseId,
+    rtmState,
+    currentPlayer,
+    currentPlayerIndex,
+    highestBid,
+    franchises,
+    franchiseStatuses,
+    players,
+    timer,
+  ]);
+
+  // --- Automatic RTM 30-Second Countdown & Auto-Decline Engine ---
+  useEffect(() => {
+    if (!rtmState || !rtmState.active) return;
+
+    // Check 30-second expiry every 500ms
+    const expiryInterval = setInterval(() => {
+      if (!rtmState.expiresAt) return;
+      const now = Date.now();
+      if (now >= rtmState.expiresAt) {
+        clearInterval(expiryInterval);
+        if (rtmState.stage === "prompt_rtm") {
+          addLog("rtm", `RTM 30-second timer expired without response. Auto-declined!`);
+          declineRtmInitial();
+        } else if (rtmState.stage === "rtm_decision") {
+          addLog("rtm", `RTM final decision 30-second timer expired without response. Auto-declined!`);
+          declineRtmFinal();
+        }
+      }
+    }, 500);
+
+    // If the original franchise is a BOT (not Islamabad United), simulate bot decision within 3.5s
+    const manualTeamId = settings.manualFranchiseId || "iu";
+    let botRtmTimeout: NodeJS.Timeout | null = null;
+
+    if (settings.botBiddingEnabled !== false) {
+      if (rtmState.stage === "prompt_rtm" && rtmState.originalFranchiseId !== manualTeamId) {
+        botRtmTimeout = setTimeout(() => {
+          const originalBot = franchises.find((f) => f.id === rtmState.originalFranchiseId);
+          // 65% chance bot exercises RTM if it has cards and budget
+          if (
+            originalBot &&
+            (originalBot.rtmCardsLeft ?? 2) > 0 &&
+            originalBot.remainingPurse >= rtmState.initialBidAmount &&
+            Math.random() < 0.65
+          ) {
+            exerciseRtm();
+          } else {
+            declineRtmInitial();
+          }
+        }, 3500);
+      } else if (rtmState.stage === "awaiting_raise" && rtmState.highestBidderFranchiseId !== manualTeamId) {
+        // Highest bidder is a bot, raise by minimum increment within 3.5s
+        botRtmTimeout = setTimeout(() => {
+          const minInc = getNextMinimumIncrement(rtmState.initialBidAmount);
+          submitRtmRaise(rtmState.initialBidAmount + minInc);
+        }, 3500);
+      } else if (rtmState.stage === "rtm_decision" && rtmState.originalFranchiseId !== manualTeamId) {
+        // Bot decides to accept or decline revised price within 3.5s
+        botRtmTimeout = setTimeout(() => {
+          const originalBot = franchises.find((f) => f.id === rtmState.originalFranchiseId);
+          const revised = rtmState.revisedBidAmount || rtmState.initialBidAmount;
+          if (originalBot && originalBot.remainingPurse >= revised && Math.random() < 0.50) {
+            acceptRtmFinal();
+          } else {
+            declineRtmFinal();
+          }
+        }, 3500);
+      }
+    }
+
+    return () => {
+      clearInterval(expiryInterval);
+      if (botRtmTimeout) clearTimeout(botRtmTimeout);
+    };
+  }, [
+    rtmState,
+    settings.botBiddingEnabled,
+    settings.manualFranchiseId,
+    franchises,
+    declineRtmInitial,
+    declineRtmFinal,
+    exerciseRtm,
+    submitRtmRaise,
+    acceptRtmFinal,
+  ]);
 
   const shuffleUpcomingPlayers = () => {
     const upcoming = players.filter((p) => p.status === "upcoming");
@@ -1727,6 +1930,8 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         proposeTrade,
         handleTradeAction,
         updateSettings,
+        toggleBotBidding,
+        botBiddingEnabled: settings.botBiddingEnabled !== false,
       }}
     >
       {children}
