@@ -302,55 +302,46 @@ export default function LiveAuctionArenaPage() {
           />
         </div>
 
-        {/* Right Column: Engine, Countdown, Bids, Controls */}
-        <div className="lg:col-span-5 space-y-4">
-          {/* Synchronized Countdown Timer */}
-          <CountdownTimer />
-
-          {/* Leading Bidder Live Highlight Card */}
+        {/* Right Column: Engine, Countdown, Bids, Controls (MOVED RIGHT TO THE TOP) */}
+        <div className="lg:col-span-5 space-y-3">
+          {/* Unified Compact Top Card: Live Highest Bid + Radial Countdown Clock */}
           <div
-            className={`rounded-3xl p-5 shadow-2xl relative overflow-hidden transition-all duration-300 border ${
+            className={`rounded-2xl p-4 shadow-xl relative overflow-hidden transition-all duration-300 border flex items-center justify-between gap-3 ${
               highestBid
-                ? "bg-slate-900/95 border-emerald-500/60 shadow-emerald-500/10"
+                ? "bg-slate-900/95 border-emerald-500/60 shadow-emerald-500/15"
                 : "bg-slate-900/90 border-slate-800"
             }`}
           >
             {highestBid && (
               <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
             )}
-            <div className="flex items-center justify-between relative z-10">
-              <div>
-                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 block">
-                  Current Highest Bid
-                </span>
-                <p className="text-3xl sm:text-4xl font-black text-amber-400 mt-1 font-mono tracking-tight">
-                  {highestBid ? formatPKR(highestBid.amount) : "No Bids Placed"}
-                </p>
-                {highestBid ? (
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-xs text-slate-300 font-bold">
-                      Leading Team:{" "}
-                      <span className="text-emerald-400 font-black underline decoration-emerald-500/50">
-                        {highestBid.franchiseName}
-                      </span>
+            <div className="relative z-10">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                Current Highest Bid
+              </span>
+              <p className="text-3xl sm:text-4xl font-black text-amber-400 font-mono tracking-tight leading-none mt-1">
+                {highestBid ? formatPKR(highestBid.amount) : formatPKR(currentPlayer?.basePrice || 0)}
+              </p>
+              {highestBid ? (
+                <div className="mt-1.5 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-xs text-slate-300 font-bold">
+                    Leading:{" "}
+                    <span className="text-emerald-400 font-black underline decoration-emerald-500/50">
+                      {highestBid.franchiseName}
                     </span>
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-500 mt-1">
-                    Opening bid starts at base price: {currentPlayer ? formatPKR(currentPlayer.basePrice) : "PKR 0"}
-                  </p>
-                )}
-              </div>
-              <div
-                className={`p-3.5 rounded-2xl border transition-colors ${
-                  highestBid
-                    ? "bg-emerald-500/20 border-emerald-500/40 text-amber-400 animate-pulse"
-                    : "bg-slate-950 border-slate-800 text-slate-600"
-                }`}
-              >
-                <Gavel className="w-8 h-8" />
-              </div>
+                  </span>
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Opening at base price ({currentPlayer?.category})
+                </p>
+              )}
+            </div>
+
+            {/* Compact Synchronized Radial Countdown Clock */}
+            <div className="shrink-0 relative z-10">
+              <CountdownTimer compact={true} />
             </div>
           </div>
 

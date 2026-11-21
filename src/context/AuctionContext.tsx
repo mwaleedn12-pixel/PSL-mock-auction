@@ -133,9 +133,9 @@ const AUTH_SESSION_KEY = "psl_12_mock_auction_session_auth_v2";
 const AuctionContext = createContext<AuctionContextType | undefined>(undefined);
 
 export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Authentication & RBAC (Isolated per browser tab/session)
-  const [role, setRole] = useState<UserRole>("spectator");
-  const [authenticatedFranchiseId, setAuthenticatedFranchiseId] = useState<string | null>(null);
+  // Authentication & RBAC (Isolated per browser tab/session - defaults to Islamabad United for immediate testing)
+  const [role, setRole] = useState<UserRole>("team_owner");
+  const [authenticatedFranchiseId, setAuthenticatedFranchiseId] = useState<string | null>("iu");
 
   // Core Auction Shared State
   const [rulePreset, setRulePresetState] = useState<RulePreset>("PSL11");
@@ -229,6 +229,9 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (parsedAuth.authenticatedFranchiseId !== undefined) {
             setAuthenticatedFranchiseId(parsedAuth.authenticatedFranchiseId);
           }
+        } else {
+          setRole("team_owner");
+          setAuthenticatedFranchiseId("iu");
         }
       } catch {}
 

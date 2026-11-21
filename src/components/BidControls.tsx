@@ -80,8 +80,18 @@ export const BidControls: React.FC = () => {
           </div>
 
           <div className="pt-2">
+            <button
+              onClick={() => switchRoleDirectly("team_owner", "iu")}
+              className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
+            >
+              <Gavel className="w-4 h-4" />
+              <span>⚡ Unlock Bidding as Islamabad United (IU)</span>
+            </button>
+          </div>
+
+          <div className="pt-2">
             <span className="text-[11px] font-bold text-slate-400 block mb-2">
-              ⚡ 1-Click Quick Bidding: Select any franchise to test bids
+              Or Select Another Franchise to Test Bids:
             </span>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {franchises.map((f) => (
@@ -150,18 +160,18 @@ export const BidControls: React.FC = () => {
   };
 
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl relative overflow-hidden">
+    <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-2xl relative overflow-hidden">
       {/* Franchise Status Ribbon */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className="flex items-center gap-2.5">
           <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm text-white shadow-md"
+            className="w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs text-white shadow-md border border-white/20 shrink-0"
             style={{ backgroundColor: currentActingFranchise.primaryColor }}
           >
             {currentActingFranchise.shortName}
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <h4 className="text-sm font-black text-white">{currentActingFranchise.name}</h4>
               {role === "admin" && (
                 <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-1.5 rounded">
@@ -170,7 +180,7 @@ export const BidControls: React.FC = () => {
               )}
             </div>
             <div className="flex items-center gap-1.5 text-xs text-slate-400">
-              <Coins className="w-3.5 h-3.5 text-amber-400" />
+              <Coins className="w-3 h-3 text-amber-400" />
               <span>Purse: <strong className="text-amber-400 font-bold">{formatPKR(currentActingFranchise.remainingPurse)}</strong></span>
             </div>
           </div>
@@ -198,76 +208,22 @@ export const BidControls: React.FC = () => {
         </div>
       </div>
 
-      {/* Real-time Franchise Owner Key Metrics Ledger */}
-      <div className="mt-3.5 p-3 rounded-2xl bg-slate-950/80 border border-slate-800/90 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
-        <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
-          <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Purse</span>
-          <span className="font-black text-white">{formatPKR(currentActingFranchise.initialPurse)}</span>
-        </div>
-        <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
-          <span className="text-[10px] uppercase font-bold text-slate-400 block">Spent</span>
-          <span className="font-black text-slate-300">{formatPKR(spentPurse)}</span>
-        </div>
-        <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
-          <span className="text-[10px] uppercase font-bold text-slate-400 block">Squad Quota</span>
-          <span className="font-black text-emerald-400">
-            {currentSquad.length} / {currentActingFranchise.maxSquadSize}
-          </span>
-        </div>
-        <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
-          <span className="text-[10px] uppercase font-bold text-slate-400 block">Min Left to 16</span>
-          <span className={`font-black ${minSlotsRequired > 0 ? "text-amber-400" : "text-emerald-400"}`}>
-            {minSlotsRequired > 0 ? `${minSlotsRequired} needed` : "Quota Met"}
-          </span>
-        </div>
-        <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800 col-span-1 sm:col-span-2">
-          <span className="text-[10px] uppercase font-bold text-slate-400 block">Overseas Slots Left</span>
-          <span className="font-bold text-cyan-400">
-            {overseasSlotsLeft} left ({currentOverseas.length}/{maxOverseasAllowed})
-          </span>
-        </div>
-        <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800 col-span-1 sm:col-span-2">
-          <span className="text-[10px] uppercase font-bold text-slate-400 block">RTM Cards</span>
-          <span className="font-bold text-amber-300 flex items-center justify-center gap-1">
-            <Sparkles className="w-3 h-3 text-amber-400" /> {currentActingFranchise.rtmCardsLeft ?? 2} Remaining
-          </span>
-        </div>
-      </div>
-
-      {/* Admin Simulator Team Selector if role is admin */}
-      {role === "admin" && (
-        <div className="mt-3 flex items-center gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800 text-xs">
-          <span className="text-slate-400 font-semibold">Admin Bid As:</span>
-          <select
-            value={adminSelectedTeamId}
-            onChange={(e) => setAdminSelectedTeamId(e.target.value)}
-            className="bg-transparent text-white font-bold focus:outline-none cursor-pointer"
-          >
-            {franchises.map((f) => (
-              <option key={f.id} value={f.id} className="bg-slate-900 text-white">
-                {f.shortName} - {f.name} ({formatPKR(f.remainingPurse)})
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
       {/* Feedback Messages */}
       {bidError && (
-        <div className="mt-3.5 p-3 rounded-xl bg-red-950/60 border border-red-500/50 flex items-center gap-2 text-xs text-red-300 font-semibold animate-shake">
+        <div className="mt-3 p-3 rounded-xl bg-red-950/60 border border-red-500/50 flex items-center gap-2 text-xs text-red-300 font-semibold animate-shake">
           <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
           <span>{bidError}</span>
         </div>
       )}
       {bidSuccess && (
-        <div className="mt-3.5 p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/50 flex items-center gap-2 text-xs text-emerald-300 font-semibold">
+        <div className="mt-3 p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/50 flex items-center gap-2 text-xs text-emerald-300 font-semibold">
           <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>{bidSuccess}</span>
         </div>
       )}
 
-      {/* Main Bid Action Button */}
-      <div className="mt-4">
+      {/* Main Bid Action Button (PLACED AT THE TOP FOR IMMEDIATE ACCESS) */}
+      <div className="mt-3">
         {auctionStatus !== "Live" && (
           <div className="mb-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs">
             <span className="text-amber-300 font-bold">
@@ -319,19 +275,19 @@ export const BidControls: React.FC = () => {
         <div className="mt-3 grid grid-cols-3 gap-2">
           <button
             onClick={() => handlePlaceBid(nextBidAmount + 250000)}
-            className="py-2 px-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl text-xs font-bold text-slate-200 transition-colors"
+            className="py-2.5 px-2 bg-slate-800/90 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold text-slate-200 transition-colors shadow-sm"
           >
             +{formatPKR(250000)} (2.5L)
           </button>
           <button
             onClick={() => handlePlaceBid(nextBidAmount + 500000)}
-            className="py-2 px-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl text-xs font-bold text-amber-300 transition-colors"
+            className="py-2.5 px-2 bg-slate-800/90 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold text-amber-300 transition-colors shadow-sm"
           >
             +{formatPKR(500000)} (5L)
           </button>
           <button
             onClick={() => handlePlaceBid(nextBidAmount + 1000000)}
-            className="py-2 px-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl text-xs font-bold text-emerald-300 transition-colors"
+            className="py-2.5 px-2 bg-slate-800/90 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold text-emerald-300 transition-colors shadow-sm"
           >
             +{formatPKR(1000000)} (10L)
           </button>
@@ -388,7 +344,7 @@ export const BidControls: React.FC = () => {
       )}
 
       {/* Skip and Out Controls */}
-      <div className="mt-4 pt-4 border-t border-slate-800/80 grid grid-cols-2 gap-3">
+      <div className="mt-3 pt-3 border-t border-slate-800/80 grid grid-cols-2 gap-2.5">
         <button
           disabled={auctionStatus !== "Live" || isOut || isSkipped || isLeading}
           onClick={handleSkip}
@@ -409,6 +365,66 @@ export const BidControls: React.FC = () => {
           <span>Out / Withdraw</span>
         </button>
       </div>
+
+      {/* Real-time Franchise Owner Key Metrics Ledger (NOW SECONDARY, UNDER BIDDING CONTROLS) */}
+      <div className="mt-4 pt-4 border-t border-slate-800/80">
+        <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+          <span>Franchise Financials &amp; Quotas</span>
+          <span className="text-amber-400 font-mono">{formatPKR(currentActingFranchise.remainingPurse)}</span>
+        </div>
+        <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800/90 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+          <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Purse</span>
+            <span className="font-black text-white">{formatPKR(currentActingFranchise.initialPurse)}</span>
+          </div>
+          <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block">Spent</span>
+            <span className="font-black text-slate-300">{formatPKR(spentPurse)}</span>
+          </div>
+          <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block">Squad Quota</span>
+            <span className="font-black text-emerald-400">
+              {currentSquad.length} / {currentActingFranchise.maxSquadSize}
+            </span>
+          </div>
+          <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block">Min Left to 16</span>
+            <span className={`font-black ${minSlotsRequired > 0 ? "text-amber-400" : "text-emerald-400"}`}>
+              {minSlotsRequired > 0 ? `${minSlotsRequired} needed` : "Quota Met"}
+            </span>
+          </div>
+          <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800 col-span-1 sm:col-span-2">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block">Overseas Slots Left</span>
+            <span className="font-bold text-cyan-400">
+              {overseasSlotsLeft} left ({currentOverseas.length}/{maxOverseasAllowed})
+            </span>
+          </div>
+          <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800 col-span-1 sm:col-span-2">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block">RTM Cards</span>
+            <span className="font-bold text-amber-300 flex items-center justify-center gap-1">
+              <Sparkles className="w-3 h-3 text-amber-400" /> {currentActingFranchise.rtmCardsLeft ?? 2} Remaining
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Admin Simulator Team Selector if role is admin */}
+      {role === "admin" && (
+        <div className="mt-3 flex items-center gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800 text-xs">
+          <span className="text-slate-400 font-semibold">Admin Bid As:</span>
+          <select
+            value={adminSelectedTeamId}
+            onChange={(e) => setAdminSelectedTeamId(e.target.value)}
+            className="bg-transparent text-white font-bold focus:outline-none cursor-pointer"
+          >
+            {franchises.map((f) => (
+              <option key={f.id} value={f.id} className="bg-slate-900 text-white">
+                {f.shortName} - {f.name} ({formatPKR(f.remainingPurse)})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <p className="text-[10px] text-slate-500 text-center mt-3">
         PSL Official Increments &amp; Reserve Purse rules validated on server.
