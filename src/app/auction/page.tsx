@@ -93,6 +93,32 @@ export default function LiveAuctionArenaPage() {
       {/* Right to Match (RTM) Modal Overlay */}
       <RtmModal />
 
+      {/* Live Broadcast Ticker Bar */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950/70 via-slate-900 to-amber-950/70 border border-emerald-500/30 p-2.5 px-4 shadow-xl flex items-center justify-between text-xs">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+          <span className="font-black text-white uppercase tracking-wider text-[11px]">LIVE BROADCAST FEED:</span>
+        </div>
+        <div className="text-slate-300 font-medium truncate max-w-xl text-[11px]">
+          {highestBid ? (
+            <span>
+              🔥 Leading Bid: <strong className="text-amber-400 font-mono font-bold">{formatPKR(highestBid.amount)}</strong> by <strong className="text-emerald-400 font-bold">{highestBid.franchiseName}</strong> on <strong className="text-white">{currentPlayer?.name}</strong>
+            </span>
+          ) : currentPlayer ? (
+            <span>
+              Now on Block: <strong className="text-emerald-300">{currentPlayer.name}</strong> • Base: <strong className="text-amber-400 font-mono">{formatPKR(currentPlayer.basePrice)}</strong> ({currentPlayer.category})
+            </span>
+          ) : (
+            <span>Welcome to the PSL 12 Live Virtual Player Auction Room!</span>
+          )}
+        </div>
+        <div className="hidden sm:flex items-center gap-2 text-slate-400 text-[10px] font-mono">
+          <span>8 FRANCHISES</span>
+          <span>•</span>
+          <span>RTM ENABLED</span>
+        </div>
+      </div>
+
       {/* Top Arena Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
         <div>
@@ -244,27 +270,48 @@ export default function LiveAuctionArenaPage() {
           <CountdownTimer />
 
           {/* Leading Bidder Live Highlight Card */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl relative overflow-hidden">
-            <div className="flex items-center justify-between">
+          <div
+            className={`rounded-3xl p-5 shadow-2xl relative overflow-hidden transition-all duration-300 border ${
+              highestBid
+                ? "bg-slate-900/95 border-emerald-500/60 shadow-emerald-500/10"
+                : "bg-slate-900/90 border-slate-800"
+            }`}
+          >
+            {highestBid && (
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
+            )}
+            <div className="flex items-center justify-between relative z-10">
               <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 block">
                   Current Highest Bid
                 </span>
-                <p className="text-3xl font-black text-amber-400 mt-1">
-                  {highestBid ? formatPKR(highestBid.amount) : "No Bids Yet"}
+                <p className="text-3xl sm:text-4xl font-black text-amber-400 mt-1 font-mono tracking-tight">
+                  {highestBid ? formatPKR(highestBid.amount) : "No Bids Placed"}
                 </p>
-                {highestBid && (
-                  <p className="text-xs text-slate-300 mt-1 flex items-center gap-1.5 font-bold">
+                {highestBid ? (
+                  <div className="mt-2 flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Leading:{" "}
-                    <span className="text-emerald-400 underline decoration-emerald-500/50">
-                      {highestBid.franchiseName}
+                    <span className="text-xs text-slate-300 font-bold">
+                      Leading Team:{" "}
+                      <span className="text-emerald-400 font-black underline decoration-emerald-500/50">
+                        {highestBid.franchiseName}
+                      </span>
                     </span>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500 mt-1">
+                    Opening bid starts at base price: {currentPlayer ? formatPKR(currentPlayer.basePrice) : "PKR 0"}
                   </p>
                 )}
               </div>
-              <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800">
-                <Gavel className="w-8 h-8 text-amber-400" />
+              <div
+                className={`p-3.5 rounded-2xl border transition-colors ${
+                  highestBid
+                    ? "bg-emerald-500/20 border-emerald-500/40 text-amber-400 animate-pulse"
+                    : "bg-slate-950 border-slate-800 text-slate-600"
+                }`}
+              >
+                <Gavel className="w-8 h-8" />
               </div>
             </div>
           </div>

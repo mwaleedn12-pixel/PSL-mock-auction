@@ -5,6 +5,7 @@ import { useAuction } from "@/context/AuctionContext";
 import { formatPKR } from "@/lib/rules";
 import { RulePreset } from "@/types/auction";
 import { AuthModal } from "@/components/AuthModal";
+import { Psl11RetentionManager } from "@/components/Psl11RetentionManager";
 import {
   Sliders,
   Play,
@@ -627,6 +628,9 @@ export default function AdminControlPanelPage() {
           </button>
         </div>
       </div>
+
+      {/* Official PSL 11 Squads & Real Retention Pricing for PSL 12 */}
+      <Psl11RetentionManager />
 
       {/* Pre-Auction Retentions & Direct Foreign Signings */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">

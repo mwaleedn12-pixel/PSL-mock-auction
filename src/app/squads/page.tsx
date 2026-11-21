@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useAuction } from "@/context/AuctionContext";
 import { formatPKR } from "@/lib/rules";
 import { PlayingXIModal } from "@/components/PlayingXIModal";
+import { Psl11RetentionManager } from "@/components/Psl11RetentionManager";
 import {
   Users,
   Shield,
@@ -32,6 +33,7 @@ export default function SquadsPage() {
     : franchises[0]?.id || "iu";
 
   const [activeTeamId, setActiveTeamId] = useState<string>(defaultTeamId);
+  const [viewMode, setViewMode] = useState<"psl12" | "psl11">("psl12");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [originFilter, setOriginFilter] = useState<string>("all");
   const [isXIModalOpen, setIsXIModalOpen] = useState(false);
@@ -81,7 +83,36 @@ export default function SquadsPage() {
         )}
       </div>
 
-      {/* Franchise Selector Pills */}
+      {/* View Mode Toggle: PSL 12 Live Auction Squad vs PSL 11 Official Squads & Prices */}
+      <div className="flex items-center gap-2 p-1 bg-slate-900 border border-slate-800 rounded-2xl w-fit">
+        <button
+          onClick={() => setViewMode("psl12")}
+          className={`px-4 py-2 rounded-xl text-xs font-black transition-colors ${
+            viewMode === "psl12"
+              ? "bg-emerald-500 text-slate-950 shadow-md"
+              : "text-slate-400 hover:text-white"
+          }`}
+        >
+          PSL 12 Live Auction Squads
+        </button>
+        <button
+          onClick={() => setViewMode("psl11")}
+          className={`px-4 py-2 rounded-xl text-xs font-black transition-colors flex items-center gap-1.5 ${
+            viewMode === "psl11"
+              ? "bg-amber-500 text-slate-950 shadow-md"
+              : "text-slate-400 hover:text-white"
+          }`}
+        >
+          <Award className="w-3.5 h-3.5" />
+          PSL 11 Squads &amp; Retention Prices
+        </button>
+      </div>
+
+      {viewMode === "psl11" ? (
+        <Psl11RetentionManager />
+      ) : (
+        <>
+          {/* Franchise Selector Pills */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
         {franchises.map((f) => {
           const isActive = f.id === activeTeamId;
@@ -258,6 +289,8 @@ export default function SquadsPage() {
           })
         )}
       </div>
+      </>
+      )}
 
       {/* Playing XI Modal */}
       <PlayingXIModal

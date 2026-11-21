@@ -108,8 +108,8 @@ export const INITIAL_FRANCHISES: Franchise[] = [
   },
   {
     id: "raw",
-    name: "Rawalpindi",
-    shortName: "RAW",
+    name: "Rawalpindiz",
+    shortName: "RPZ",
     city: "Rawalpindi",
     logo: "🦅",
     primaryColor: "#be123c",

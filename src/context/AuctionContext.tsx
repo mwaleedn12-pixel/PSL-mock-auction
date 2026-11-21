@@ -13,9 +13,11 @@ import {
   TradeOffer,
   RulePreset,
   RtmState,
+  PlayerRole,
 } from "@/types/auction";
 import { INITIAL_FRANCHISES } from "@/data/initialFranchises";
 import { INITIAL_PLAYERS } from "@/data/initialPlayers";
+import { PSL_11_SQUADS, Psl11SquadPlayer } from "@/data/psl11Squads";
 import { soundEngine } from "@/lib/audio";
 import { validateBid, getNextMinimumIncrement } from "@/lib/rules";
 import confetti from "canvas-confetti";
@@ -74,11 +76,13 @@ interface AuctionContextType {
   startRoundTwo: () => void;
   resetAuction: () => void;
 
-  // Management
+  // Management & Retentions
   addPlayer: (newPlayer: Partial<Player>) => void;
   importPlayersList: (newPlayers: Player[]) => void;
   retainPlayer: (franchiseId: string, playerId: string, price: number) => void;
   directSignPlayer: (franchiseId: string, playerId: string, price: number) => void;
+  applyOfficialPsl11Retentions: () => { count: number; totalPurseSpent: number };
+  retainPsl11SquadPlayer: (franchiseId: string, player: Psl11SquadPlayer) => void;
   toggleWatchlist: (franchiseId: string, playerId: string, maxBid?: number, notes?: string, priority?: 'High' | 'Medium' | 'Low') => void;
   savePlayingXI: (franchiseId: string, playerIds: string[], captainId?: string, viceCaptainId?: string) => void;
   proposeTrade: (trade: Omit<TradeOffer, "id" | "createdAt" | "status">) => void;
@@ -91,7 +95,7 @@ const DEFAULT_SETTINGS: AuctionSettings = {
   name: "PSL 12 Official Mock Auction Room",
   roomCode: "PSL12-AUCTION-2027",
   season: "PSL Season 12",
-  rulePreset: "PSL11", // Preset A: PSL 11 rules preset
+  rulePreset: "PSL11",
   currency: "PKR",
   totalPursePerTeam: 450000000, // 45 Crore standard
   maxQualifyingPurse: 505000000, // 50.5 Crore qualifying
@@ -104,10 +108,10 @@ const DEFAULT_SETTINGS: AuctionSettings = {
   minUncappedU23PlayingXI: 1,
   maxRetentions: 4,
   maxDirectForeignSignings: 1,
-  defaultTimerSeconds: 30, // 30s opening timer
-  timerResetSeconds: 15, // 15s reset on bid
-  extensionSeconds: 10, // 10s extension
-  extensionTriggerSeconds: 5, // trigger in last 5 seconds
+  defaultTimerSeconds: 30,
+  timerResetSeconds: 15,
+  extensionSeconds: 10,
+  extensionTriggerSeconds: 5,
   autoSellOnAllOut: true,
   soundEffectsEnabled: true,
   voiceAnnouncements: true,
@@ -118,15 +122,16 @@ const DEFAULT_SETTINGS: AuctionSettings = {
 };
 
 const STORAGE_KEY = "psl_12_mock_auction_state_v2";
+const AUTH_SESSION_KEY = "psl_12_mock_auction_session_auth_v2";
 
 const AuctionContext = createContext<AuctionContextType | undefined>(undefined);
 
 export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Authentication & RBAC (Default is spectator as requested: "login direct na aai")
+  // Authentication & RBAC (Isolated per browser tab/session)
   const [role, setRole] = useState<UserRole>("spectator");
   const [authenticatedFranchiseId, setAuthenticatedFranchiseId] = useState<string | null>(null);
 
-  // Core Auction State
+  // Core Auction Shared State
   const [rulePreset, setRulePresetState] = useState<RulePreset>("PSL11");
   const [auctionStatus, setAuctionStatus] = useState<AuctionStatus>("Ready");
   const [franchises, setFranchises] = useState<Franchise[]>(INITIAL_FRANCHISES);
@@ -140,15 +145,83 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [watchlists, setWatchlists] = useState<WatchlistItem[]>([]);
   const [tradeOffers, setTradeOffers] = useState<TradeOffer[]>([]);
   const [eventLogs, setEventLogs] = useState<AuctionEventLog[]>([]);
-  // Right to Match (RTM) active state
   const [rtmState, setRtmState] = useState<RtmState | null>(null);
 
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load state from LocalStorage on mount + URL parameter login detection
+  // Broadcast function to all tabs
+  const broadcastSync = useCallback((data: Record<string, unknown>) => {
+    if (broadcastChannelRef.current) {
+      try {
+        broadcastChannelRef.current.postMessage({
+          type: "STATE_SYNC",
+          payload: data,
+        });
+      } catch {}
+    }
+  }, []);
+
+  // Save shared state to LocalStorage
+  const persistState = useCallback(() => {
+    if (typeof window !== "undefined") {
+      const stateToSave = {
+        franchises,
+        players,
+        auctionStatus,
+        currentPlayerIndex,
+        currentBids,
+        franchiseStatuses,
+        settings,
+        rulePreset,
+        watchlists,
+        tradeOffers,
+        eventLogs,
+        rtmState,
+        timer,
+        isTimerRunning,
+      };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+      } catch {}
+    }
+  }, [
+    franchises,
+    players,
+    auctionStatus,
+    currentPlayerIndex,
+    currentBids,
+    franchiseStatuses,
+    settings,
+    rulePreset,
+    watchlists,
+    tradeOffers,
+    eventLogs,
+    rtmState,
+    timer,
+    isTimerRunning,
+  ]);
+
+  useEffect(() => {
+    persistState();
+  }, [persistState]);
+
+  // Load state from LocalStorage and SessionStorage on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
+      // 1. Restore tab session authentication (isolated from other tabs)
+      try {
+        const sessionAuth = sessionStorage.getItem(AUTH_SESSION_KEY);
+        if (sessionAuth) {
+          const parsedAuth = JSON.parse(sessionAuth);
+          if (parsedAuth.role) setRole(parsedAuth.role);
+          if (parsedAuth.authenticatedFranchiseId !== undefined) {
+            setAuthenticatedFranchiseId(parsedAuth.authenticatedFranchiseId);
+          }
+        }
+      } catch {}
+
+      // 2. Load shared room state from LocalStorage
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         try {
@@ -164,13 +237,13 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (parsed.watchlists) setWatchlists(parsed.watchlists);
           if (parsed.tradeOffers) setTradeOffers(parsed.tradeOffers);
           if (parsed.eventLogs) setEventLogs(parsed.eventLogs);
-          if (parsed.role) setRole(parsed.role);
-          if (parsed.authenticatedFranchiseId) setAuthenticatedFranchiseId(parsed.authenticatedFranchiseId);
+          if (typeof parsed.timer === "number") setTimer(parsed.timer);
+          if (typeof parsed.isTimerRunning === "boolean") setIsTimerRunning(parsed.isTimerRunning);
           if (parsed.rtmState !== undefined) setRtmState(parsed.rtmState);
         } catch {}
       }
 
-      // Check URL query parameters for instant franchise link join or spectator mode
+      // 3. Check URL query parameters for instant franchise link join or spectator mode
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const joinKey = urlParams.get("join") || urlParams.get("passkey") || urlParams.get("code");
@@ -180,25 +253,49 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (joinKey) {
           const cleanKey = joinKey.trim().toUpperCase();
           const matched = INITIAL_FRANCHISES.find(
-            (f) => f.privatePasskey.toUpperCase() === cleanKey || f.id.toUpperCase() === cleanKey
+            (f) =>
+              f.privatePasskey.toUpperCase() === cleanKey ||
+              f.id.toUpperCase() === cleanKey ||
+              f.shortName.toUpperCase() === cleanKey ||
+              (f.id === "raw" &&
+                (cleanKey === "RPZ-2027" ||
+                  cleanKey === "RAW-2027" ||
+                  cleanKey === "RPZ" ||
+                  cleanKey === "RAW"))
           );
           if (matched) {
             setRole("team_owner");
             setAuthenticatedFranchiseId(matched.id);
+            sessionStorage.setItem(
+              AUTH_SESSION_KEY,
+              JSON.stringify({ role: "team_owner", authenticatedFranchiseId: matched.id })
+            );
           }
         } else if (teamId) {
-          const matched = INITIAL_FRANCHISES.find((f) => f.id.toLowerCase() === teamId.toLowerCase());
+          const matched = INITIAL_FRANCHISES.find(
+            (f) =>
+              f.id.toLowerCase() === teamId.toLowerCase() ||
+              (f.id === "raw" && (teamId.toLowerCase() === "rpz" || teamId.toLowerCase() === "rawalpindiz"))
+          );
           if (matched) {
             setRole("team_owner");
             setAuthenticatedFranchiseId(matched.id);
+            sessionStorage.setItem(
+              AUTH_SESSION_KEY,
+              JSON.stringify({ role: "team_owner", authenticatedFranchiseId: matched.id })
+            );
           }
         } else if (requestedRole === "spectator") {
           setRole("spectator");
           setAuthenticatedFranchiseId(null);
+          sessionStorage.setItem(
+            AUTH_SESSION_KEY,
+            JSON.stringify({ role: "spectator", authenticatedFranchiseId: null })
+          );
         }
       } catch {}
 
-      // Initialize cross-tab BroadcastChannel
+      // 4. Initialize cross-tab BroadcastChannel
       try {
         const bc = new BroadcastChannel("psl_auction_sync_channel_v2");
         broadcastChannelRef.current = bc;
@@ -213,48 +310,61 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
             if (syncData.franchiseStatuses) setFranchiseStatuses(syncData.franchiseStatuses);
             if (typeof syncData.timer === "number") setTimer(syncData.timer);
             if (typeof syncData.isTimerRunning === "boolean") setIsTimerRunning(syncData.isTimerRunning);
+            if (syncData.settings) setSettings(syncData.settings);
+            if (syncData.rulePreset) setRulePresetState(syncData.rulePreset);
+            if (syncData.watchlists) setWatchlists(syncData.watchlists);
+            if (syncData.tradeOffers) setTradeOffers(syncData.tradeOffers);
             if (syncData.eventLogs) setEventLogs(syncData.eventLogs);
             if ("rtmState" in syncData) setRtmState(syncData.rtmState);
+          } else if (event.data?.type === "REQUEST_SYNC") {
+            // New tab joined, provide current state
+            try {
+              const currentSaved = localStorage.getItem(STORAGE_KEY);
+              if (currentSaved) {
+                const parsed = JSON.parse(currentSaved);
+                bc.postMessage({ type: "STATE_SYNC", payload: parsed });
+              }
+            } catch {}
           }
         };
+
+        // Emit sync request to get active room state from any active admin or peer tab
+        bc.postMessage({ type: "REQUEST_SYNC" });
       } catch {}
-    }
 
-    return () => {
-      if (broadcastChannelRef.current) {
-        broadcastChannelRef.current.close();
-      }
-    };
-  }, []);
-
-  // Save to LocalStorage
-  const persistState = useCallback(() => {
-    if (typeof window !== "undefined") {
-      const stateToSave = {
-        franchises,
-        players,
-        auctionStatus,
-        currentPlayerIndex,
-        currentBids,
-        franchiseStatuses,
-        settings,
-        rulePreset,
-        watchlists,
-        tradeOffers,
-        eventLogs,
-        role,
-        authenticatedFranchiseId,
-        rtmState,
+      // 5. Cross-window/cross-tab Storage Event Listener
+      const handleStorageEvent = (event: StorageEvent) => {
+        if (event.key === STORAGE_KEY && event.newValue) {
+          try {
+            const parsed = JSON.parse(event.newValue);
+            if (parsed.franchises) setFranchises(parsed.franchises);
+            if (parsed.players) setPlayers(parsed.players);
+            if (parsed.auctionStatus) setAuctionStatus(parsed.auctionStatus);
+            if (typeof parsed.currentPlayerIndex === "number") setCurrentPlayerIndex(parsed.currentPlayerIndex);
+            if (parsed.currentBids) setCurrentBids(parsed.currentBids);
+            if (parsed.franchiseStatuses) setFranchiseStatuses(parsed.franchiseStatuses);
+            if (typeof parsed.timer === "number") setTimer(parsed.timer);
+            if (typeof parsed.isTimerRunning === "boolean") setIsTimerRunning(parsed.isTimerRunning);
+            if (parsed.settings) setSettings(parsed.settings);
+            if (parsed.rulePreset) setRulePresetState(parsed.rulePreset);
+            if (parsed.watchlists) setWatchlists(parsed.watchlists);
+            if (parsed.tradeOffers) setTradeOffers(parsed.tradeOffers);
+            if (parsed.eventLogs) setEventLogs(parsed.eventLogs);
+            if ("rtmState" in parsed) setRtmState(parsed.rtmState);
+          } catch {}
+        }
       };
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
-      } catch {}
-    }
-  }, [franchises, players, auctionStatus, currentPlayerIndex, currentBids, franchiseStatuses, settings, rulePreset, watchlists, tradeOffers, eventLogs, role, authenticatedFranchiseId, rtmState]);
 
-  useEffect(() => {
-    persistState();
-  }, [persistState]);
+      window.addEventListener("storage", handleStorageEvent);
+
+      return () => {
+        window.removeEventListener("storage", handleStorageEvent);
+        if (broadcastChannelRef.current) {
+          broadcastChannelRef.current.close();
+        }
+      };
+    }
+  }, []);
 
   // Derived current player, highest bid, and active franchise
   const currentPlayer = players[currentPlayerIndex] || null;
@@ -279,21 +389,19 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setEventLogs((prev) => [newLog, ...prev.slice(0, 199)]);
   };
 
-  // Broadcast state
-  const broadcastSync = (data: Record<string, unknown>) => {
-    if (broadcastChannelRef.current) {
-      broadcastChannelRef.current.postMessage({
-        type: "STATE_SYNC",
-        payload: data,
-      });
-    }
-  };
-
-  // --- Authentication Handlers ---
+  // --- Authentication Handlers (Isolated to current tab session) ---
   const loginAsAdmin = (password: string) => {
     if (password === "admin123" || password === "admin" || password === "psl12") {
       setRole("admin");
       setAuthenticatedFranchiseId(null);
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem(
+            AUTH_SESSION_KEY,
+            JSON.stringify({ role: "admin", authenticatedFranchiseId: null })
+          );
+        } catch {}
+      }
       addLog("admin", "Super Administrator logged in.");
       return { success: true, message: "Welcome Super Administrator! Auction control unlocked." };
     }
@@ -303,12 +411,28 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const loginAsTeamOwner = (passkey: string, roomCode?: string) => {
     const cleanKey = passkey.trim().toUpperCase();
     const matchedFranchise = franchises.find(
-      (f) => f.privatePasskey.toUpperCase() === cleanKey || f.id.toUpperCase() === cleanKey
+      (f) =>
+        f.privatePasskey.toUpperCase() === cleanKey ||
+        f.id.toUpperCase() === cleanKey ||
+        f.shortName.toUpperCase() === cleanKey ||
+        (f.id === "raw" &&
+          (cleanKey === "RPZ-2027" ||
+            cleanKey === "RAW-2027" ||
+            cleanKey === "RPZ" ||
+            cleanKey === "RAW"))
     );
 
     if (matchedFranchise) {
       setRole("team_owner");
       setAuthenticatedFranchiseId(matchedFranchise.id);
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem(
+            AUTH_SESSION_KEY,
+            JSON.stringify({ role: "team_owner", authenticatedFranchiseId: matchedFranchise.id })
+          );
+        } catch {}
+      }
       addLog("admin", `${matchedFranchise.name} Team Owner joined room.`);
       return { success: true, message: `Access granted! You are logged in as Team Owner of ${matchedFranchise.name}.` };
     }
@@ -318,14 +442,23 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const logoutToSpectator = () => {
     setRole("spectator");
     setAuthenticatedFranchiseId(null);
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem(
+          AUTH_SESSION_KEY,
+          JSON.stringify({ role: "spectator", authenticatedFranchiseId: null })
+        );
+      } catch {}
+    }
   };
 
-  // Rule Preset Selector (Preset A: PSL 11 vs Preset B: PSL 12)
+  // Rule Preset Selector
   const setRulePreset = (preset: RulePreset) => {
     setRulePresetState(preset);
+    let updatedSettings = { ...settings };
     if (preset === "PSL11") {
-      setSettings((prev) => ({
-        ...prev,
+      updatedSettings = {
+        ...updatedSettings,
         rulePreset: "PSL11",
         name: "PSL 11 Official Rules Mock Auction",
         totalPursePerTeam: 450000000,
@@ -339,11 +472,11 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         minUncappedU23PlayingXI: 1,
         maxRetentions: 4,
         maxDirectForeignSignings: 1,
-      }));
+      };
       addLog("admin", "Rule Preset changed to: PRESET A - PSL 11 Official Rules.");
     } else if (preset === "PSL12") {
-      setSettings((prev) => ({
-        ...prev,
+      updatedSettings = {
+        ...updatedSettings,
         rulePreset: "PSL12",
         name: "PSL 12 Announced Framework Mock Auction",
         totalPursePerTeam: 450000000,
@@ -352,9 +485,11 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         minSquadSize: 16,
         maxSquadSize: 20,
         maxDirectForeignSignings: 1,
-      }));
+      };
       addLog("admin", "Rule Preset changed to: PRESET B - PSL 12 Announced Framework.");
     }
+    setSettings(updatedSettings);
+    broadcastSync({ settings: updatedSettings, rulePreset: preset });
   };
 
   // Navigate to Next Player
@@ -372,18 +507,34 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     if (nextIdx < players.length) {
       setCurrentPlayerIndex(nextIdx);
-      if (auctionStatus === "Live") {
+      const isLive = auctionStatus === "Live";
+      if (isLive) {
         setIsTimerRunning(true);
-        soundEngine.speakAnnouncement(`Next player: ${players[nextIdx].name}, category ${players[nextIdx].category}, base price ${(players[nextIdx].basePrice / 10000000).toFixed(2)} Crore.`);
+        soundEngine.speakAnnouncement(
+          `Next player: ${players[nextIdx].name}, category ${players[nextIdx].category}, base price ${(players[nextIdx].basePrice / 10000000).toFixed(2)} Crore.`
+        );
       }
+      broadcastSync({
+        currentPlayerIndex: nextIdx,
+        currentBids: [],
+        franchiseStatuses: {},
+        timer: settings.defaultTimerSeconds,
+        isTimerRunning: isLive,
+        rtmState: null,
+      });
     } else {
       setAuctionStatus("Completed");
       soundEngine.speakAnnouncement("The PSL Mock Auction has successfully concluded!");
       addLog("admin", "Auction completed. All players processed.");
+      broadcastSync({
+        auctionStatus: "Completed",
+        isTimerRunning: false,
+        rtmState: null,
+      });
     }
-  }, [currentPlayerIndex, players, auctionStatus, settings.defaultTimerSeconds]);
+  }, [currentPlayerIndex, players, auctionStatus, settings.defaultTimerSeconds, broadcastSync]);
 
-  // Helper to complete a confirmed sale (direct or via RTM)
+  // Complete a confirmed sale (direct or via RTM)
   const completePlayerSale = useCallback(
     (playerToSell: Player, soldToFranchiseId: string, soldPrice: number, isRtmSale: boolean = false) => {
       const winningTeam = franchises.find((f) => f.id === soldToFranchiseId);
@@ -405,35 +556,33 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       // Deduct purse, increment squad count, decrement RTM card if used
-      setFranchises((prev) =>
-        prev.map((f) => {
-          if (f.id === soldToFranchiseId) {
-            return {
-              ...f,
-              remainingPurse: f.remainingPurse - soldPrice,
-              squadCount: f.squadCount + 1,
-              rtmCardsLeft: isRtmSale ? Math.max(0, (f.rtmCardsLeft ?? 2) - 1) : f.rtmCardsLeft,
-            };
-          }
-          return f;
-        })
-      );
+      const updatedFranchises = franchises.map((f) => {
+        if (f.id === soldToFranchiseId) {
+          return {
+            ...f,
+            remainingPurse: f.remainingPurse - soldPrice,
+            squadCount: f.squadCount + 1,
+            rtmCardsLeft: isRtmSale ? Math.max(0, (f.rtmCardsLeft ?? 2) - 1) : f.rtmCardsLeft,
+          };
+        }
+        return f;
+      });
+      setFranchises(updatedFranchises);
 
       // Update player record
-      setPlayers((prev) =>
-        prev.map((p) => {
-          if (p.id === playerToSell.id) {
-            return {
-              ...p,
-              status: "sold",
-              soldToFranchiseId: soldToFranchiseId,
-              soldPrice: soldPrice,
-              currentPrice: soldPrice,
-            };
-          }
-          return p;
-        })
-      );
+      const updatedPlayers = players.map((p) => {
+        if (p.id === playerToSell.id) {
+          return {
+            ...p,
+            status: "sold" as const,
+            soldToFranchiseId: soldToFranchiseId,
+            soldPrice: soldPrice,
+            currentPrice: soldPrice,
+          };
+        }
+        return p;
+      });
+      setPlayers(updatedPlayers);
 
       addLog(
         "sold",
@@ -448,14 +597,18 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       );
 
       setRtmState(null);
-      broadcastSync({ rtmState: null });
+      broadcastSync({
+        franchises: updatedFranchises,
+        players: updatedPlayers,
+        rtmState: null,
+        isTimerRunning: false,
+      });
 
       setTimeout(() => {
         goToNextPlayer();
       }, 3500);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [franchises, goToNextPlayer]
+    [franchises, players, goToNextPlayer, broadcastSync]
   );
 
   // Finalize current player (Sold, Unsold, or Trigger RTM)
@@ -508,7 +661,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 amount: finalBid.amount,
               }
             );
-            broadcastSync({ rtmState: newRtm });
+            broadcastSync({ rtmState: newRtm, isTimerRunning: false });
             return;
           }
         }
@@ -519,27 +672,27 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         soundEngine.playGavelHammerSound();
         soundEngine.speakAnnouncement(`${current.name} marked unsold.`);
 
-        setPlayers((prev) =>
-          prev.map((p, idx) => {
-            if (idx === currentPlayerIndex) {
-              return { ...p, status: "unsold" };
-            }
-            return p;
-          })
-        );
+        const updatedPlayers = players.map((p, idx) => {
+          if (idx === currentPlayerIndex) {
+            return { ...p, status: "unsold" as const };
+          }
+          return p;
+        });
+        setPlayers(updatedPlayers);
 
         addLog("unsold", `${current.name} marked UNSOLD.`, {
           playerId: current.id,
           playerName: current.name,
         });
 
+        broadcastSync({ players: updatedPlayers, isTimerRunning: false });
+
         setTimeout(() => {
           goToNextPlayer();
         }, 3500);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [players, currentPlayerIndex, currentBids, franchises, settings.enableRTM, completePlayerSale, goToNextPlayer]
+    [players, currentPlayerIndex, currentBids, franchises, settings.enableRTM, completePlayerSale, goToNextPlayer, broadcastSync]
   );
 
   // RTM Action Handlers
@@ -658,11 +811,21 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const goToPreviousPlayer = () => {
     if (currentPlayerIndex > 0) {
+      const prevIdx = currentPlayerIndex - 1;
       setCurrentBids([]);
       setFranchiseStatuses({});
       setTimer(settings.defaultTimerSeconds);
       setIsTimerRunning(false);
-      setCurrentPlayerIndex(currentPlayerIndex - 1);
+      setCurrentPlayerIndex(prevIdx);
+      setRtmState(null);
+      broadcastSync({
+        currentPlayerIndex: prevIdx,
+        currentBids: [],
+        franchiseStatuses: {},
+        timer: settings.defaultTimerSeconds,
+        isTimerRunning: false,
+        rtmState: null,
+      });
     }
   };
 
@@ -674,6 +837,15 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setTimer(settings.defaultTimerSeconds);
       setIsTimerRunning(false);
       setCurrentPlayerIndex(idx);
+      setRtmState(null);
+      broadcastSync({
+        currentPlayerIndex: idx,
+        currentBids: [],
+        franchiseStatuses: {},
+        timer: settings.defaultTimerSeconds,
+        isTimerRunning: false,
+        rtmState: null,
+      });
     }
   };
 
@@ -692,6 +864,16 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
           } else if (prev % 5 === 0) {
             soundEngine.playTickSound(false);
           }
+
+          // Broadcast timer to other tabs periodically (every second when running)
+          if (role === "admin") {
+            broadcastSync({
+              timer: prev - 1,
+              isTimerRunning: true,
+              currentPlayerIndex,
+            });
+          }
+
           return prev - 1;
         });
       }, 1000);
@@ -704,9 +886,9 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [isTimerRunning, auctionStatus, finalizePlayer]);
+  }, [isTimerRunning, auctionStatus, finalizePlayer, role, broadcastSync, currentPlayerIndex]);
 
-  // Real-time automatic skip/out rule check (Custom Mock Rule Section 13)
+  // Real-time automatic skip/out rule check
   useEffect(() => {
     if (auctionStatus !== "Live" || !isTimerRunning || !currentPlayer) return;
 
@@ -733,7 +915,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [franchiseStatuses, auctionStatus, isTimerRunning, highestBid, currentPlayer, franchises, players, settings.autoSellOnAllOut, finalizePlayer]);
 
-  // Place a Bid with RBAC check: Only authenticated franchise owner can bid for their team!
+  // Place a Bid
   const placeBid = (franchiseIdParam?: string, customAmount?: number): { success: boolean; message: string } => {
     if (role === "spectator") {
       return { success: false, message: "Spectator Mode: You are in read-only mode. Please login as a Team Owner to bid." };
@@ -781,7 +963,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       players,
       settings.minSquadSize,
       settings.maxSquadSize,
-      6000000 // 60L lowest base price
+      6000000
     );
 
     if (!validation.valid) {
@@ -803,19 +985,22 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       soundEngine.playBidSound();
     }
 
-    // Reset or extend timer (Section 12: 15s reset, +10s in final 5 seconds)
-    setTimer((prev) => {
-      if (prev <= settings.extensionTriggerSeconds) {
-        return prev + settings.extensionSeconds;
-      }
-      return settings.timerResetSeconds;
-    });
+    // Reset or extend timer
+    const newTimerVal = timer <= settings.extensionTriggerSeconds
+      ? timer + settings.extensionSeconds
+      : settings.timerResetSeconds;
 
+    setTimer(newTimerVal);
+
+    let updatedStatuses = franchiseStatuses;
     if (franchiseStatuses[biddingFranchiseId] === "skipped") {
-      setFranchiseStatuses((prev) => ({ ...prev, [biddingFranchiseId]: "active" }));
+      updatedStatuses = { ...franchiseStatuses, [biddingFranchiseId]: "active" };
+      setFranchiseStatuses(updatedStatuses);
     }
 
-    setCurrentBids((prev) => [...prev, newBid]);
+    const updatedBids = [...currentBids, newBid];
+    setCurrentBids(updatedBids);
+
     addLog("bid", `${franchise.name} placed bid of PKR ${(proposedAmount / 10000000).toFixed(2)} Cr`, {
       playerId: currentPlayer.id,
       playerName: currentPlayer.name,
@@ -825,8 +1010,11 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
 
     broadcastSync({
-      currentBids: [...currentBids, newBid],
-      timer: settings.timerResetSeconds,
+      currentBids: updatedBids,
+      franchiseStatuses: updatedStatuses,
+      timer: newTimerVal,
+      isTimerRunning: true,
+      currentPlayerIndex,
     });
 
     return { success: true, message: `Bid of PKR ${(proposedAmount / 10000000).toFixed(2)} Cr accepted for ${franchise.name}!` };
@@ -837,129 +1025,164 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!fId) return;
     const f = franchises.find((team) => team.id === fId);
     if (!f) return;
-    setFranchiseStatuses((prev) => ({ ...prev, [fId]: "skipped" }));
+    const updatedStatuses = { ...franchiseStatuses, [fId]: "skipped" as const };
+    setFranchiseStatuses(updatedStatuses);
     addLog("skip", `${f.name} passed/skipped bidding on ${currentPlayer?.name || "current player"}.`, {
       franchiseId: fId,
       franchiseName: f.name,
     });
+    broadcastSync({ franchiseStatuses: updatedStatuses });
   };
 
   const outCurrentPlayer = (franchiseIdParam?: string) => {
     const fId = role === "team_owner" ? authenticatedFranchiseId : (franchiseIdParam || authenticatedFranchiseId);
     if (!fId) return;
-    if (highestBid && highestBid.franchiseId === fId) return; // Cannot withdraw leading bid!
+    if (highestBid && highestBid.franchiseId === fId) return;
     const f = franchises.find((team) => team.id === fId);
     if (!f) return;
-    setFranchiseStatuses((prev) => ({ ...prev, [fId]: "out" }));
+    const updatedStatuses = { ...franchiseStatuses, [fId]: "out" as const };
+    setFranchiseStatuses(updatedStatuses);
     addLog("out", `${f.name} permanently withdrew (OUT) from ${currentPlayer?.name || "current player"}.`, {
       franchiseId: fId,
       franchiseName: f.name,
     });
+    broadcastSync({ franchiseStatuses: updatedStatuses });
   };
 
   const shuffleUpcomingPlayers = () => {
-    setPlayers((prev) => {
-      // Collect upcoming players
-      const upcoming = prev.filter((p) => p.status === "upcoming");
-      // Fisher-Yates shuffle
+    const upcoming = players.filter((p) => p.status === "upcoming");
+    for (let i = upcoming.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [upcoming[i], upcoming[j]] = [upcoming[j], upcoming[i]];
+    }
+    let uIdx = 0;
+    const updatedPlayers = players.map((p) => (p.status === "upcoming" ? upcoming[uIdx++] : p));
+    setPlayers(updatedPlayers);
+    addLog("admin", "Upcoming player pool order randomized (Pot Draw Order).");
+    broadcastSync({ players: updatedPlayers });
+  };
+
+  const reEnterUnsoldPlayers = (selectedPlayerIds?: string[], discountPercent: number = 0) => {
+    const updatedPlayers = players.map((p) => {
+      const shouldReEnter =
+        p.status === "unsold" &&
+        (!selectedPlayerIds || selectedPlayerIds.length === 0 || selectedPlayerIds.includes(p.id));
+
+      if (shouldReEnter) {
+        const discountFactor = Math.max(0.5, 1 - discountPercent / 100);
+        const newPrice = Math.round(p.basePrice * discountFactor);
+        return {
+          ...p,
+          status: "upcoming" as const,
+          auctionRound: (p.auctionRound || 1) + 1,
+          basePrice: newPrice,
+          currentPrice: newPrice,
+        };
+      }
+      return p;
+    });
+
+    const firstUpcoming = updatedPlayers.findIndex((p) => p.status === "upcoming");
+    const newIdx = firstUpcoming !== -1 ? firstUpcoming : 0;
+
+    setPlayers(updatedPlayers);
+    setCurrentPlayerIndex(newIdx);
+    setCurrentBids([]);
+    setFranchiseStatuses({});
+    setTimer(settings.defaultTimerSeconds);
+    setAuctionStatus("Live");
+    setIsTimerRunning(true);
+
+    const count = selectedPlayerIds && selectedPlayerIds.length > 0 ? selectedPlayerIds.length : "all";
+    addLog("round2", `Accelerated Auction Round started for ${count} unsold players with ${discountPercent}% price adjustment.`);
+    soundEngine.speakAnnouncement(`Accelerated auction round has begun for unsold players!`);
+
+    broadcastSync({
+      players: updatedPlayers,
+      currentPlayerIndex: newIdx,
+      currentBids: [],
+      franchiseStatuses: {},
+      timer: settings.defaultTimerSeconds,
+      auctionStatus: "Live",
+      isTimerRunning: true,
+      rtmState: null,
+    });
+  };
+
+  const startAuction = () => {
+    let currentPool = players;
+    if (settings.playerOccurrenceOrder === "random") {
+      const upcoming = players.filter((p) => p.status === "upcoming");
       for (let i = upcoming.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [upcoming[i], upcoming[j]] = [upcoming[j], upcoming[i]];
       }
       let uIdx = 0;
-      return prev.map((p) => (p.status === "upcoming" ? upcoming[uIdx++] : p));
-    });
-    addLog("admin", "Upcoming player pool order randomized (Pot Draw Order).");
-  };
-
-  const reEnterUnsoldPlayers = (selectedPlayerIds?: string[], discountPercent: number = 0) => {
-    setPlayers((prev) =>
-      prev.map((p) => {
-        const shouldReEnter =
-          p.status === "unsold" &&
-          (!selectedPlayerIds || selectedPlayerIds.length === 0 || selectedPlayerIds.includes(p.id));
-
-        if (shouldReEnter) {
-          const discountFactor = Math.max(0.5, 1 - discountPercent / 100);
-          const newPrice = Math.round(p.basePrice * discountFactor);
-          return {
-            ...p,
-            status: "upcoming" as const,
-            auctionRound: (p.auctionRound || 1) + 1,
-            basePrice: newPrice,
-            currentPrice: newPrice,
-          };
-        }
-        return p;
-      })
-    );
-
-    setTimeout(() => {
-      setPlayers((currentList) => {
-        const firstUpcoming = currentList.findIndex((p) => p.status === "upcoming");
-        if (firstUpcoming !== -1) {
-          setCurrentPlayerIndex(firstUpcoming);
-          setCurrentBids([]);
-          setFranchiseStatuses({});
-          setTimer(settings.defaultTimerSeconds);
-          setAuctionStatus("Live");
-          setIsTimerRunning(true);
-        }
-        return currentList;
-      });
-    }, 100);
-
-    const count = selectedPlayerIds && selectedPlayerIds.length > 0 ? selectedPlayerIds.length : "all";
-    addLog("round2", `Accelerated Auction Round started for ${count} unsold players with ${discountPercent}% price adjustment.`);
-    soundEngine.speakAnnouncement(`Accelerated auction round has begun for unsold players!`);
-  };
-
-  const startAuction = () => {
-    if (settings.playerOccurrenceOrder === "random") {
-      shuffleUpcomingPlayers();
+      currentPool = players.map((p) => (p.status === "upcoming" ? upcoming[uIdx++] : p));
+      setPlayers(currentPool);
     }
     setAuctionStatus("Live");
     setIsTimerRunning(true);
     setTimer(settings.defaultTimerSeconds);
     addLog("start", "Live Player Auction started!");
     soundEngine.speakAnnouncement("The PSL Mock Auction is now live! Bidding has commenced.");
+
+    broadcastSync({
+      players: currentPool,
+      auctionStatus: "Live",
+      isTimerRunning: true,
+      timer: settings.defaultTimerSeconds,
+      currentPlayerIndex,
+      currentBids: [],
+      franchiseStatuses: {},
+      rtmState: null,
+    });
   };
 
   const pauseAuction = () => {
     setAuctionStatus("Paused");
     setIsTimerRunning(false);
     addLog("pause", "Auction paused by administrator.");
+    broadcastSync({
+      auctionStatus: "Paused",
+      isTimerRunning: false,
+      timer,
+    });
   };
 
   const resumeAuction = () => {
     setAuctionStatus("Live");
     setIsTimerRunning(true);
     addLog("resume", "Auction resumed by administrator.");
+    broadcastSync({
+      auctionStatus: "Live",
+      isTimerRunning: true,
+      timer,
+    });
   };
 
   const startRoundTwo = () => {
     const unsoldPlayers = players.filter((p) => p.status === "unsold");
     if (unsoldPlayers.length === 0) return;
 
-    setPlayers((prev) =>
-      prev.map((p) => {
-        if (p.status === "unsold") {
-          return {
-            ...p,
-            status: "upcoming",
-            auctionRound: 2,
-            basePrice: Math.round(p.basePrice * 0.8), // 20% discount in Round 2
-            currentPrice: Math.round(p.basePrice * 0.8),
-          };
-        }
-        return p;
-      })
-    );
+    const updatedPlayers = players.map((p) => {
+      if (p.status === "unsold") {
+        return {
+          ...p,
+          status: "upcoming" as const,
+          auctionRound: 2,
+          basePrice: Math.round(p.basePrice * 0.8),
+          currentPrice: Math.round(p.basePrice * 0.8),
+        };
+      }
+      return p;
+    });
 
-    const firstUnsoldIdx = players.findIndex((p) => p.status === "unsold");
-    if (firstUnsoldIdx !== -1) {
-      setCurrentPlayerIndex(firstUnsoldIdx);
-    }
+    const firstUnsoldIdx = updatedPlayers.findIndex((p) => p.status === "upcoming");
+    const targetIdx = firstUnsoldIdx !== -1 ? firstUnsoldIdx : 0;
+
+    setPlayers(updatedPlayers);
+    setCurrentPlayerIndex(targetIdx);
     setCurrentBids([]);
     setFranchiseStatuses({});
     setTimer(settings.defaultTimerSeconds);
@@ -968,6 +1191,17 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     addLog("round2", "Second Auction Round initiated for Unsold Players!");
     soundEngine.speakAnnouncement("Second auction round has commenced for unsold players!");
+
+    broadcastSync({
+      players: updatedPlayers,
+      currentPlayerIndex: targetIdx,
+      currentBids: [],
+      franchiseStatuses: {},
+      timer: settings.defaultTimerSeconds,
+      auctionStatus: "Live",
+      isTimerRunning: true,
+      rtmState: null,
+    });
   };
 
   const resetAuction = () => {
@@ -982,9 +1216,26 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setEventLogs([]);
     setTradeOffers([]);
     setWatchlists([]);
+    setRtmState(null);
     if (typeof window !== "undefined") {
-      localStorage.removeItem(STORAGE_KEY);
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {}
     }
+    broadcastSync({
+      franchises: INITIAL_FRANCHISES,
+      players: INITIAL_PLAYERS,
+      currentPlayerIndex: 0,
+      currentBids: [],
+      franchiseStatuses: {},
+      timer: DEFAULT_SETTINGS.defaultTimerSeconds,
+      isTimerRunning: false,
+      auctionStatus: "Ready",
+      eventLogs: [],
+      tradeOffers: [],
+      watchlists: [],
+      rtmState: null,
+    });
   };
 
   const addPlayer = (newPlayer: Partial<Player>) => {
@@ -1008,13 +1259,17 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       isUncapped: newPlayer.isUncapped || false,
       stats: newPlayer.stats,
     };
-    setPlayers((prev) => [...prev, p]);
+    const updatedPlayers = [...players, p];
+    setPlayers(updatedPlayers);
     addLog("admin", `New player added: ${p.name} (${p.category})`);
+    broadcastSync({ players: updatedPlayers });
   };
 
   const importPlayersList = (newPlayers: Player[]) => {
-    setPlayers((prev) => [...prev, ...newPlayers]);
+    const updatedPlayers = [...players, ...newPlayers];
+    setPlayers(updatedPlayers);
     addLog("admin", `Successfully imported ${newPlayers.length} players into auction database.`);
+    broadcastSync({ players: updatedPlayers });
   };
 
   const retainPlayer = (franchiseId: string, playerId: string, price: number) => {
@@ -1022,25 +1277,24 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const player = players.find((p) => p.id === playerId);
     if (!franchise || !player) return;
 
-    setPlayers((prev) =>
-      prev.map((p) =>
-        p.id === playerId
-          ? { ...p, status: "retained", isRetained: true, soldToFranchiseId: franchiseId, soldPrice: price }
-          : p
-      )
+    const updatedPlayers = players.map((p) =>
+      p.id === playerId
+        ? { ...p, status: "retained" as const, isRetained: true, soldToFranchiseId: franchiseId, soldPrice: price, currentPrice: price }
+        : p
     );
 
-    setFranchises((prev) =>
-      prev.map((f) =>
-        f.id === franchiseId
-          ? {
-              ...f,
-              remainingPurse: f.remainingPurse - price,
-              squadCount: f.squadCount + 1,
-            }
-          : f
-      )
+    const updatedFranchises = franchises.map((f) =>
+      f.id === franchiseId
+        ? {
+            ...f,
+            remainingPurse: f.remainingPurse - price,
+            squadCount: f.squadCount + 1,
+          }
+        : f
     );
+
+    setPlayers(updatedPlayers);
+    setFranchises(updatedFranchises);
 
     addLog("retention", `${franchise.name} retained ${player.name} for ${(price / 10000000).toFixed(2)} Cr`, {
       franchiseId,
@@ -1049,6 +1303,8 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       playerName: player.name,
       amount: price,
     });
+
+    broadcastSync({ players: updatedPlayers, franchises: updatedFranchises });
   };
 
   const directSignPlayer = (franchiseId: string, playerId: string, price: number) => {
@@ -1056,25 +1312,24 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const player = players.find((p) => p.id === playerId);
     if (!franchise || !player) return;
 
-    setPlayers((prev) =>
-      prev.map((p) =>
-        p.id === playerId
-          ? { ...p, status: "direct_signing", isDirectSigning: true, soldToFranchiseId: franchiseId, soldPrice: price }
-          : p
-      )
+    const updatedPlayers = players.map((p) =>
+      p.id === playerId
+        ? { ...p, status: "direct_signing" as const, isDirectSigning: true, soldToFranchiseId: franchiseId, soldPrice: price, currentPrice: price }
+        : p
     );
 
-    setFranchises((prev) =>
-      prev.map((f) =>
-        f.id === franchiseId
-          ? {
-              ...f,
-              remainingPurse: f.remainingPurse - price,
-              squadCount: f.squadCount + 1,
-            }
-          : f
-      )
+    const updatedFranchises = franchises.map((f) =>
+      f.id === franchiseId
+        ? {
+            ...f,
+            remainingPurse: f.remainingPurse - price,
+            squadCount: f.squadCount + 1,
+          }
+        : f
     );
+
+    setPlayers(updatedPlayers);
+    setFranchises(updatedFranchises);
 
     addLog("retention", `${franchise.name} directly signed ${player.name} for ${(price / 10000000).toFixed(2)} Cr`, {
       franchiseId,
@@ -1082,6 +1337,164 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       playerId,
       playerName: player.name,
       amount: price,
+    });
+
+    broadcastSync({ players: updatedPlayers, franchises: updatedFranchises });
+  };
+
+  // Apply Official PSL 11 Core Retentions to all 8 Franchises
+  const applyOfficialPsl11Retentions = (): { count: number; totalPurseSpent: number } => {
+    let count = 0;
+    let totalPurseSpent = 0;
+
+    const updatedFranchises = [...franchises];
+    let updatedPlayers = [...players];
+
+    Object.entries(PSL_11_SQUADS).forEach(([franchiseId, squad]) => {
+      const corePlayers = squad.filter((p) => p.isOfficialCoreRetention);
+      corePlayers.forEach((corePlayer) => {
+        const franchiseIdx = updatedFranchises.findIndex((f) => f.id === franchiseId);
+        if (franchiseIdx !== -1) {
+          updatedFranchises[franchiseIdx] = {
+            ...updatedFranchises[franchiseIdx],
+            remainingPurse: Math.max(0, updatedFranchises[franchiseIdx].remainingPurse - corePlayer.pricePKR),
+            squadCount: updatedFranchises[franchiseIdx].squadCount + 1,
+          };
+          count++;
+          totalPurseSpent += corePlayer.pricePKR;
+        }
+
+        const playerIdx = updatedPlayers.findIndex(
+          (p) => p.name.toLowerCase().trim() === corePlayer.name.toLowerCase().trim()
+        );
+
+        if (playerIdx !== -1) {
+          updatedPlayers[playerIdx] = {
+            ...updatedPlayers[playerIdx],
+            status: "retained",
+            isRetained: true,
+            soldToFranchiseId: franchiseId,
+            soldPrice: corePlayer.pricePKR,
+            currentPrice: corePlayer.pricePKR,
+          };
+        } else {
+          updatedPlayers.push({
+            id: corePlayer.id,
+            name: corePlayer.name,
+            photoUrl: corePlayer.photoUrl || "https://images.icc-cricket.com/image/upload/t_player-headshot-portrait-lg-webp/prd/assets/players/generic/colored/69957.png",
+            nationality: corePlayer.nationality,
+            isOverseas: corePlayer.isOverseas,
+            age: corePlayer.age,
+            battingStyle: corePlayer.battingStyle,
+            bowlingStyle: corePlayer.bowlingStyle,
+            primaryRole: corePlayer.role as PlayerRole,
+            category: corePlayer.category,
+            basePrice: corePlayer.pricePKR,
+            currentPrice: corePlayer.pricePKR,
+            status: "retained",
+            isRetained: true,
+            soldToFranchiseId: franchiseId,
+            soldPrice: corePlayer.pricePKR,
+            cricinfoUrl: corePlayer.cricinfoUrl,
+          });
+        }
+      });
+    });
+
+    setFranchises(updatedFranchises);
+    setPlayers(updatedPlayers);
+
+    addLog(
+      "retention",
+      `Applied official PSL 11 core retentions for all franchises (${count} star players retained, total ${(totalPurseSpent / 10000000).toFixed(2)} Cr deducted from team budgets).`
+    );
+    soundEngine.playSoldFanfare();
+
+    broadcastSync({
+      franchises: updatedFranchises,
+      players: updatedPlayers,
+    });
+
+    return { count, totalPurseSpent };
+  };
+
+  // Retain a single PSL 11 squad player for a specific franchise
+  const retainPsl11SquadPlayer = (franchiseId: string, pslPlayer: Psl11SquadPlayer) => {
+    const franchise = franchises.find((f) => f.id === franchiseId);
+    if (!franchise) return;
+
+    if (franchise.remainingPurse < pslPlayer.pricePKR) {
+      alert(`${franchise.name} does not have sufficient purse for PKR ${(pslPlayer.pricePKR / 10000000).toFixed(2)} Cr!`);
+      return;
+    }
+
+    const updatedFranchises = franchises.map((f) =>
+      f.id === franchiseId
+        ? {
+            ...f,
+            remainingPurse: f.remainingPurse - pslPlayer.pricePKR,
+            squadCount: f.squadCount + 1,
+          }
+        : f
+    );
+
+    let updatedPlayers = [...players];
+    const playerIdx = updatedPlayers.findIndex(
+      (p) => p.name.toLowerCase().trim() === pslPlayer.name.toLowerCase().trim()
+    );
+
+    if (playerIdx !== -1) {
+      updatedPlayers = updatedPlayers.map((p, idx) =>
+        idx === playerIdx
+          ? {
+              ...p,
+              status: "retained" as const,
+              isRetained: true,
+              soldToFranchiseId: franchiseId,
+              soldPrice: pslPlayer.pricePKR,
+              currentPrice: pslPlayer.pricePKR,
+            }
+          : p
+      );
+    } else {
+      updatedPlayers.push({
+        id: pslPlayer.id,
+        name: pslPlayer.name,
+        photoUrl: pslPlayer.photoUrl || "https://images.icc-cricket.com/image/upload/t_player-headshot-portrait-lg-webp/prd/assets/players/generic/colored/69957.png",
+        nationality: pslPlayer.nationality,
+        isOverseas: pslPlayer.isOverseas,
+        age: pslPlayer.age,
+        battingStyle: pslPlayer.battingStyle,
+        bowlingStyle: pslPlayer.bowlingStyle,
+        primaryRole: pslPlayer.role as PlayerRole,
+        category: pslPlayer.category,
+        basePrice: pslPlayer.pricePKR,
+        currentPrice: pslPlayer.pricePKR,
+        status: "retained",
+        isRetained: true,
+        soldToFranchiseId: franchiseId,
+        soldPrice: pslPlayer.pricePKR,
+        cricinfoUrl: pslPlayer.cricinfoUrl,
+      });
+    }
+
+    setFranchises(updatedFranchises);
+    setPlayers(updatedPlayers);
+
+    addLog(
+      "retention",
+      `${franchise.name} retained PSL 11 star ${pslPlayer.name} for PKR ${(pslPlayer.pricePKR / 10000000).toFixed(2)} Cr.`,
+      {
+        franchiseId,
+        franchiseName: franchise.name,
+        playerName: pslPlayer.name,
+        amount: pslPlayer.pricePKR,
+      }
+    );
+
+    broadcastSync({
+      franchises: updatedFranchises,
+      players: updatedPlayers,
     });
   };
 
@@ -1102,18 +1515,18 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const savePlayingXI = (franchiseId: string, playerIds: string[], captainId?: string, viceCaptainId?: string) => {
-    setFranchises((prev) =>
-      prev.map((f) =>
-        f.id === franchiseId
-          ? {
-              ...f,
-              playingXI: playerIds,
-              captainId,
-              viceCaptainId,
-            }
-          : f
-      )
+    const updatedFranchises = franchises.map((f) =>
+      f.id === franchiseId
+        ? {
+            ...f,
+            playingXI: playerIds,
+            captainId,
+            viceCaptainId,
+          }
+        : f
     );
+    setFranchises(updatedFranchises);
+    broadcastSync({ franchises: updatedFranchises });
   };
 
   const proposeTrade = (tradeData: Omit<TradeOffer, "id" | "createdAt" | "status">) => {
@@ -1125,42 +1538,56 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
     setTradeOffers((prev) => [newOffer, ...prev]);
     addLog("trade", `Trade proposed between ${tradeData.fromFranchiseId} and ${tradeData.toFranchiseId}`);
+    broadcastSync({ tradeOffers: [newOffer, ...tradeOffers] });
   };
 
   const handleTradeAction = (tradeId: string, action: 'accept' | 'reject' | 'admin_approve' | 'cancel') => {
-    setTradeOffers((prev) =>
-      prev.map((t) => {
-        if (t.id !== tradeId) return t;
+    let updatedPlayers = players;
+    let updatedFranchises = franchises;
 
-        if (action === "admin_approve" || (action === "accept" && t.status === "pending")) {
-          if (t.offeredPlayerId && t.requestedPlayerId) {
-            setPlayers((playersList) =>
-              playersList.map((p) => {
-                if (p.id === t.offeredPlayerId) return { ...p, soldToFranchiseId: t.toFranchiseId };
-                if (p.id === t.requestedPlayerId) return { ...p, soldToFranchiseId: t.fromFranchiseId };
-                return p;
-              })
-            );
-          }
-          if (t.offeredCash) {
-            setFranchises((franchiseList) =>
-              franchiseList.map((f) => {
-                if (f.id === t.fromFranchiseId) return { ...f, remainingPurse: f.remainingPurse - t.offeredCash! };
-                if (f.id === t.toFranchiseId) return { ...f, remainingPurse: f.remainingPurse + t.offeredCash! };
-                return f;
-              })
-            );
-          }
-          return { ...t, status: action === "admin_approve" ? "approved_by_admin" : "accepted" };
+    const updatedOffers = tradeOffers.map((t) => {
+      if (t.id !== tradeId) return t;
+
+      if (action === "admin_approve" || (action === "accept" && t.status === "pending")) {
+        if (t.offeredPlayerId && t.requestedPlayerId) {
+          updatedPlayers = players.map((p) => {
+            if (p.id === t.offeredPlayerId) return { ...p, soldToFranchiseId: t.toFranchiseId };
+            if (p.id === t.requestedPlayerId) return { ...p, soldToFranchiseId: t.fromFranchiseId };
+            return p;
+          });
         }
+        if (t.offeredCash) {
+          updatedFranchises = franchises.map((f) => {
+            if (f.id === t.fromFranchiseId) return { ...f, remainingPurse: f.remainingPurse - t.offeredCash! };
+            if (f.id === t.toFranchiseId) return { ...f, remainingPurse: f.remainingPurse + t.offeredCash! };
+            return f;
+          });
+        }
+        return { ...t, status: 'accepted' as const };
+      } else if (action === "reject") {
+        return { ...t, status: 'rejected' as const };
+      } else if (action === "cancel") {
+        return { ...t, status: 'cancelled' as const };
+      }
+      return t;
+    });
 
-        return { ...t, status: action === "reject" ? "rejected" : "cancelled" };
-      })
-    );
+    setTradeOffers(updatedOffers);
+    setPlayers(updatedPlayers);
+    setFranchises(updatedFranchises);
+
+    broadcastSync({
+      tradeOffers: updatedOffers,
+      players: updatedPlayers,
+      franchises: updatedFranchises,
+    });
   };
 
   const updateSettings = (newSettings: Partial<AuctionSettings>) => {
-    setSettings((prev) => ({ ...prev, ...newSettings }));
+    const updated = { ...settings, ...newSettings };
+    setSettings(updated);
+    addLog("admin", "Auction settings modified.");
+    broadcastSync({ settings: updated });
   };
 
   return (
@@ -1213,6 +1640,8 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         importPlayersList,
         retainPlayer,
         directSignPlayer,
+        applyOfficialPsl11Retentions,
+        retainPsl11SquadPlayer,
         toggleWatchlist,
         savePlayingXI,
         proposeTrade,
@@ -1225,7 +1654,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 };
 
-export const useAuction = () => {
+export const useAuction = (): AuctionContextType => {
   const context = useContext(AuctionContext);
   if (!context) {
     throw new Error("useAuction must be used within an AuctionProvider");
