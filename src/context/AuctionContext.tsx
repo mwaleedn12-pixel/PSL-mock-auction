@@ -300,6 +300,13 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
               JSON.stringify({ role: "team_owner", authenticatedFranchiseId: matched.id })
             );
           }
+        } else if (requestedRole === "admin" || urlParams.get("admin") === "true") {
+          setRole("admin");
+          setAuthenticatedFranchiseId(null);
+          sessionStorage.setItem(
+            AUTH_SESSION_KEY,
+            JSON.stringify({ role: "admin", authenticatedFranchiseId: null })
+          );
         } else if (requestedRole === "spectator") {
           setRole("spectator");
           setAuthenticatedFranchiseId(null);
