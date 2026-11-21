@@ -278,6 +278,13 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                   </div>
                 )}
 
+                {player.stats.bowlingAverage !== undefined && (
+                  <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
+                    <span className="block text-[10px] text-slate-500 font-semibold">Bowl Avg</span>
+                    <span className="font-bold text-rose-400">{player.stats.bowlingAverage}</span>
+                  </div>
+                )}
+
                 {player.stats.bestBowling !== undefined && (
                   <div className="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
                     <span className="block text-[10px] text-slate-500 font-semibold">Best</span>

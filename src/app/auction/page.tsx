@@ -6,6 +6,8 @@ import { PlayerCard } from "@/components/PlayerCard";
 import { CountdownTimer } from "@/components/CountdownTimer";
 import { BidControls } from "@/components/BidControls";
 import { UpcomingQueueShowcase } from "@/components/UpcomingQueueShowcase";
+import { FranchiseComparisonMatrix } from "@/components/FranchiseComparisonMatrix";
+import { RtmModal } from "@/components/RtmModal";
 import { formatPKR } from "@/lib/rules";
 import {
   Gavel,
@@ -24,6 +26,10 @@ import {
   Eye,
   Bookmark,
   Volume2,
+  Copy,
+  Check,
+  Shuffle,
+  Users,
 } from "lucide-react";
 
 export default function LiveAuctionArenaPage() {
@@ -45,12 +51,16 @@ export default function LiveAuctionArenaPage() {
     goToPreviousPlayer,
     selectPlayerForAuction,
     startRoundTwo,
+    reEnterUnsoldPlayers,
+    shuffleUpcomingPlayers,
     toggleWatchlist,
     watchlists,
     activeFranchise,
+    settings,
   } = useAuction();
 
-  const [activeTab, setActiveTab] = useState<"bids" | "franchises" | "queue">("bids");
+  const [activeTab, setActiveTab] = useState<"bids" | "franchises" | "queue" | "wishlist">("bids");
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
 
   const upcomingPlayers = players.filter((p) => p.status === "upcoming");
   const unsoldPlayers = players.filter((p) => p.status === "unsold");
@@ -60,8 +70,29 @@ export default function LiveAuctionArenaPage() {
     currentPlayer &&
     watchlists.some((w) => w.franchiseId === activeFranchise.id && w.playerId === currentPlayer.id);
 
+  const myWatchlist = activeFranchise
+    ? watchlists.filter((w) => w.franchiseId === activeFranchise.id)
+    : [];
+
+  const handleCopyLink = (type: "team" | "spectator") => {
+    if (typeof window === "undefined") return;
+    const origin = window.location.origin;
+    let url = `${origin}/auction`;
+    if (type === "team" && activeFranchise) {
+      url = `${origin}/auction?join=${activeFranchise.privatePasskey}`;
+    } else if (type === "spectator") {
+      url = `${origin}/auction?role=spectator`;
+    }
+    navigator.clipboard.writeText(url);
+    setCopiedLink(type);
+    setTimeout(() => setCopiedLink(null), 2500);
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
+      {/* Right to Match (RTM) Modal Overlay */}
+      <RtmModal />
+
       {/* Top Arena Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
         <div>
@@ -74,14 +105,38 @@ export default function LiveAuctionArenaPage() {
             <span className="text-xs text-slate-400">
               Player {currentPlayerIndex + 1} of {players.length}
             </span>
+            <span className="text-xs text-slate-500">•</span>
+            <span className="text-xs text-amber-400 font-semibold">
+              Order: {settings.playerOccurrenceOrder === "random" ? "Random Pot Draw" : "Sequential Order"}
+            </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-0.5">
             PSL 12 Live Player Auction
           </h1>
         </div>
 
-        {/* Watchlist toggle & Arena Quick Actions */}
-        <div className="flex items-center gap-2">
+        {/* Shareable Invite Links & Quick Actions */}
+        <div className="flex flex-wrap items-center gap-2">
+          {activeFranchise && (
+            <button
+              onClick={() => handleCopyLink("team")}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-900 border border-slate-700 text-slate-200 hover:text-white transition-colors"
+              title="Copy private invite link for this franchise"
+            >
+              {copiedLink === "team" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+              <span>{copiedLink === "team" ? "Link Copied!" : "My Team Link"}</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => handleCopyLink("spectator")}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-900 border border-slate-700 text-slate-200 hover:text-white transition-colors"
+            title="Copy public read-only spectator stream link"
+          >
+            {copiedLink === "spectator" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
+            <span>{copiedLink === "spectator" ? "Spectator Link Copied!" : "Spectator Link"}</span>
+          </button>
+
           {activeFranchise && currentPlayer && (
             <button
               onClick={() => toggleWatchlist(activeFranchise.id, currentPlayer.id)}
@@ -92,16 +147,26 @@ export default function LiveAuctionArenaPage() {
               }`}
             >
               <Bookmark className={`w-3.5 h-3.5 ${isCurrentWatchlisted ? "fill-amber-400" : ""}`} />
-              <span>{isCurrentWatchlisted ? "Watchlisted" : "Add to Watchlist"}</span>
+              <span>{isCurrentWatchlisted ? "Watchlisted" : "Add to Wishlist"}</span>
+            </button>
+          )}
+
+          {role === "admin" && (
+            <button
+              onClick={shuffleUpcomingPlayers}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors"
+              title="Shuffle upcoming players randomly for a live draw"
+            >
+              <Shuffle className="w-3.5 h-3.5 text-amber-400" /> Shuffle Order
             </button>
           )}
 
           {unsoldPlayers.length > 0 && auctionStatus !== "Live" && (
             <button
-              onClick={startRoundTwo}
+              onClick={() => reEnterUnsoldPlayers([], 0)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors"
             >
-              <RefreshCw className="w-3.5 h-3.5" /> Start Round 2 ({unsoldPlayers.length} Unsold)
+              <RefreshCw className="w-3.5 h-3.5" /> Re-Auction Unsold ({unsoldPlayers.length})
             </button>
           )}
         </div>
@@ -139,29 +204,33 @@ export default function LiveAuctionArenaPage() {
                         : status === "out"
                         ? "bg-red-950/20 border-red-900/40 text-red-400/80 opacity-70"
                         : status === "skipped"
-                        ? "bg-amber-950/20 border-amber-900/40 text-amber-400"
-                        : "bg-slate-950/60 border-slate-800 text-slate-300"
+                        ? "bg-amber-950/20 border-amber-900/40 text-amber-400/80"
+                        : "bg-slate-950/50 border-slate-800 text-slate-300"
                     }`}
                   >
                     <div className="flex items-center gap-2 truncate">
-                      <div
-                        className="w-3 h-3 rounded-full shrink-0"
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
                         style={{ backgroundColor: f.primaryColor }}
                       />
                       <span className="truncate">{f.shortName}</span>
                     </div>
 
-                    <span className="text-[10px] font-black uppercase">
-                      {isLeading
-                        ? "👑 BID"
-                        : isFull
-                        ? "FULL"
-                        : status === "out"
-                        ? "OUT"
-                        : status === "skipped"
-                        ? "PASS"
-                        : "ACTIVE"}
-                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {isLeading ? (
+                        <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-black">
+                          BID
+                        </span>
+                      ) : status === "out" ? (
+                        <span className="text-[10px] text-red-400 font-bold">OUT</span>
+                      ) : status === "skipped" ? (
+                        <span className="text-[10px] text-amber-400 font-bold">PASS</span>
+                      ) : isFull ? (
+                        <span className="text-[10px] text-slate-500">FULL</span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400">IN</span>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -169,63 +238,56 @@ export default function LiveAuctionArenaPage() {
           </div>
         </div>
 
-        {/* Right Column: Clock, Live Highest Bid, Bidding Controls, Stream */}
+        {/* Right Column: Engine, Countdown, Bids, Controls */}
         <div className="lg:col-span-5 space-y-4">
-          {/* Synchronized Server Countdown Clock */}
+          {/* Synchronized Countdown Timer */}
           <CountdownTimer />
 
-          {/* Current Highest Bid Highlight */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl text-center relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-amber-400 to-emerald-500" />
-            <span className="text-xs uppercase tracking-wider text-slate-400 font-bold block mb-1">
-              {highestBid ? "Leading Bidder" : "Starting Price"}
-            </span>
-
-            {highestBid ? (
+          {/* Leading Bidder Live Highlight Card */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl relative overflow-hidden">
+            <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-3xl font-black text-amber-400 tracking-tight">
-                  {formatPKR(highestBid.amount)}
-                </h3>
-                <div className="inline-flex items-center gap-2 mt-2 px-3 py-1 rounded-full bg-slate-950 border border-slate-800">
-                  <div
-                    className="w-4 h-4 rounded-full"
-                    style={{
-                      backgroundColor:
-                        franchises.find((f) => f.id === highestBid.franchiseId)?.primaryColor || "#10b981",
-                    }}
-                  />
-                  <span className="text-xs font-black text-white">{highestBid.franchiseName}</span>
-                </div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Current Highest Bid
+                </span>
+                <p className="text-3xl font-black text-amber-400 mt-1">
+                  {highestBid ? formatPKR(highestBid.amount) : "No Bids Yet"}
+                </p>
+                {highestBid && (
+                  <p className="text-xs text-slate-300 mt-1 flex items-center gap-1.5 font-bold">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Leading:{" "}
+                    <span className="text-emerald-400 underline decoration-emerald-500/50">
+                      {highestBid.franchiseName}
+                    </span>
+                  </p>
+                )}
               </div>
-            ) : (
-              <div>
-                <h3 className="text-2xl font-bold text-slate-200">
-                  {currentPlayer ? formatPKR(currentPlayer.basePrice) : "PKR 0"}
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">Awaiting opening bid from franchise</p>
+              <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800">
+                <Gavel className="w-8 h-8 text-amber-400" />
               </div>
-            )}
+            </div>
           </div>
 
-          {/* Interactive Bidding Controls for Active Franchise */}
+          {/* Interactive Bidding & Franchise Controls */}
           <BidControls />
 
-          {/* Tabs: Live Bid Stream, Queue, Franchise Purse */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-md">
-            <div className="flex items-center gap-2 border-b border-slate-800 pb-2 mb-3 text-xs font-bold">
+          {/* Tabbed Live Box: Bids History, Next Up, Team Purses, My Wishlist */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-4 shadow-xl">
+            <div className="flex items-center gap-1 p-1 bg-slate-950 rounded-xl mb-3 text-xs font-bold">
               <button
                 onClick={() => setActiveTab("bids")}
-                className={`px-3 py-1.5 rounded-lg transition-colors ${
+                className={`flex-1 py-1.5 rounded-lg transition-colors ${
                   activeTab === "bids"
                     ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                     : "text-slate-400 hover:text-white"
                 }`}
               >
-                Bid History ({currentBids.length})
+                Bids ({currentBids.length})
               </button>
               <button
                 onClick={() => setActiveTab("queue")}
-                className={`px-3 py-1.5 rounded-lg transition-colors ${
+                className={`flex-1 py-1.5 rounded-lg transition-colors ${
                   activeTab === "queue"
                     ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                     : "text-slate-400 hover:text-white"
@@ -235,14 +297,26 @@ export default function LiveAuctionArenaPage() {
               </button>
               <button
                 onClick={() => setActiveTab("franchises")}
-                className={`px-3 py-1.5 rounded-lg transition-colors ${
+                className={`flex-1 py-1.5 rounded-lg transition-colors ${
                   activeTab === "franchises"
                     ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                     : "text-slate-400 hover:text-white"
                 }`}
               >
-                Team Purses
+                Purses
               </button>
+              {activeFranchise && (
+                <button
+                  onClick={() => setActiveTab("wishlist")}
+                  className={`flex-1 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1 ${
+                    activeTab === "wishlist"
+                      ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <Bookmark className="w-3 h-3" /> Wishlist ({myWatchlist.length})
+                </button>
+              )}
             </div>
 
             {/* Tab: Bid History */}
@@ -276,7 +350,7 @@ export default function LiveAuctionArenaPage() {
             {/* Tab: Upcoming Queue */}
             {activeTab === "queue" && (
               <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
-                {upcomingPlayers.slice(0, 8).map((p) => (
+                {upcomingPlayers.slice(0, 10).map((p) => (
                   <div
                     key={p.id}
                     onClick={() => selectPlayerForAuction(p.id)}
@@ -317,9 +391,57 @@ export default function LiveAuctionArenaPage() {
                 })}
               </div>
             )}
+
+            {/* Tab: My Wishlist */}
+            {activeTab === "wishlist" && activeFranchise && (
+              <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                {myWatchlist.length === 0 ? (
+                  <p className="text-center text-xs text-slate-500 py-4">
+                    Your wishlist is empty. Click bookmark on any player to add them.
+                  </p>
+                ) : (
+                  myWatchlist.map((w) => {
+                    const wp = players.find((p) => p.id === w.playerId);
+                    if (!wp) return null;
+                    const isSoldToMe = wp.soldToFranchiseId === activeFranchise.id;
+                    return (
+                      <div
+                        key={w.playerId}
+                        className="p-2 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between text-xs"
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <Bookmark className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
+                          <span className="font-bold text-white truncate">{wp.name}</span>
+                          <span className="text-[10px] text-slate-400">({wp.category})</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-slate-300">{formatPKR(wp.basePrice)}</span>
+                          <span
+                            className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${
+                              isSoldToMe
+                                ? "bg-emerald-500/20 text-emerald-400"
+                                : wp.status === "sold"
+                                ? "bg-red-500/20 text-red-400"
+                                : wp.status === "unsold"
+                                ? "bg-slate-800 text-slate-400"
+                                : "bg-cyan-500/20 text-cyan-400"
+                            }`}
+                          >
+                            {isSoldToMe ? "Signed" : wp.status}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* ALL FRANCHISES LIVE COMPARISON & FINANCIAL MATRIX */}
+      <FranchiseComparisonMatrix />
 
       {/* Upcoming Player Queue with Kit Pictures & PSL / T20 Stats */}
       <UpcomingQueueShowcase />
@@ -387,4 +509,3 @@ export default function LiveAuctionArenaPage() {
     </div>
   );
 }
-

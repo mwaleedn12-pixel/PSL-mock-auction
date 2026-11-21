@@ -24,6 +24,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Peshawar Zalmi",
+    previousFranchiseId: "pz",
     kitDescription: "Official Peshawar Zalmi Yellow Kit",
     stats: {
       matches: 90,
@@ -56,6 +57,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Lahore Qalandars",
+    previousFranchiseId: "lq",
     kitDescription: "Official Lahore Qalandars Green Kit",
     stats: {
       matches: 72,
@@ -88,6 +90,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Multan Sultans",
+    previousFranchiseId: "ms",
     kitDescription: "Official Multan Sultans Green/Gold Kit",
     stats: {
       matches: 81,
@@ -121,6 +124,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Islamabad United",
+    previousFranchiseId: "iu",
     kitDescription: "Official Islamabad United Red Kit",
     stats: {
       matches: 82,
@@ -154,6 +158,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Islamabad United",
+    previousFranchiseId: "iu",
     kitDescription: "Official Islamabad United Red Kit",
     stats: {
       matches: 44,
@@ -184,6 +189,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Lahore Qalandars",
+    previousFranchiseId: "lq",
     kitDescription: "Official Lahore Qalandars Green Kit",
     stats: {
       matches: 86,
@@ -216,6 +222,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Lahore Qalandars",
+    previousFranchiseId: "lq",
     kitDescription: "Official Lahore Qalandars Green Kit",
     stats: {
       matches: 66,
@@ -246,6 +253,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Multan Sultans",
+    previousFranchiseId: "ms",
     kitDescription: "Official Multan Sultans Green/Gold Kit",
     stats: {
       matches: 76,
@@ -277,6 +285,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Multan Sultans",
+    previousFranchiseId: "ms",
     kitDescription: "Official Multan Sultans Green/Gold Kit",
     stats: {
       matches: 42,
@@ -307,6 +316,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Lahore Qalandars",
+    previousFranchiseId: "lq",
     kitDescription: "Official Lahore Qalandars Green Kit",
     stats: {
       matches: 28,
@@ -339,6 +349,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Multan Sultans",
+    previousFranchiseId: "ms",
     kitDescription: "Official Multan Sultans Green/Gold Kit",
     stats: {
       matches: 23,
@@ -370,6 +381,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Lahore Qalandars",
+    previousFranchiseId: "lq",
     kitDescription: "Official Lahore Qalandars Green Kit",
     stats: {
       matches: 17,
@@ -406,6 +418,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Peshawar Zalmi",
+    previousFranchiseId: "pz",
     kitDescription: "Official Peshawar Zalmi Yellow Kit",
     stats: {
       matches: 37,
@@ -438,6 +451,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Quetta Gladiators",
+    previousFranchiseId: "qg",
     kitDescription: "Official Quetta Gladiators Purple/Gold Kit",
     stats: {
       matches: 75,
@@ -468,6 +482,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Islamabad United",
+    previousFranchiseId: "iu",
     kitDescription: "Official Islamabad United Red Kit",
     stats: {
       matches: 89,
@@ -501,6 +516,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Islamabad United",
+    previousFranchiseId: "iu",
     kitDescription: "Official Islamabad United Red Kit",
     stats: {
       matches: 52,
@@ -533,6 +549,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Islamabad United",
+    previousFranchiseId: "iu",
     kitDescription: "Official Islamabad United Red Kit",
     stats: {
       matches: 34,
@@ -564,6 +581,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Multan Sultans",
+    previousFranchiseId: "ms",
     kitDescription: "Official Multan Sultans Green/Gold Kit",
     stats: {
       matches: 21,
@@ -596,6 +614,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Multan Sultans",
+    previousFranchiseId: "ms",
     kitDescription: "Official Multan Sultans Green/Gold Kit",
     stats: {
       matches: 58,
@@ -626,6 +645,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Multan Sultans",
+    previousFranchiseId: "ms",
     kitDescription: "Official Multan Sultans Green/Gold Kit",
     stats: {
       matches: 29,
@@ -656,6 +676,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Multan Sultans",
+    previousFranchiseId: "ms",
     kitDescription: "Official Multan Sultans Green/Gold Kit",
     stats: {
       matches: 18,
@@ -686,6 +707,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Karachi Kings",
+    previousFranchiseId: "kk",
     kitDescription: "Official Karachi Kings Blue/Red Kit",
     stats: {
       matches: 55,
@@ -717,6 +739,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Karachi Kings",
+    previousFranchiseId: "kk",
     kitDescription: "Official Karachi Kings Blue/Red Kit",
     stats: {
       matches: 81,
@@ -747,6 +770,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Lahore Qalandars",
+    previousFranchiseId: "lq",
     kitDescription: "Official Lahore Qalandars Green Kit",
     stats: {
       matches: 33,
@@ -778,6 +802,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Lahore Qalandars",
+    previousFranchiseId: "lq",
     kitDescription: "Official Lahore Qalandars Green Kit",
     stats: {
       matches: 28,
@@ -810,6 +835,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Quetta Gladiators",
+    previousFranchiseId: "qg",
     kitDescription: "Official Quetta Gladiators Purple/Gold Kit",
     stats: {
       matches: 84,
@@ -842,6 +868,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Quetta Gladiators",
+    previousFranchiseId: "qg",
     kitDescription: "Official Quetta Gladiators Purple/Gold Kit",
     stats: {
       matches: 22,
@@ -874,6 +901,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Peshawar Zalmi",
+    previousFranchiseId: "pz",
     kitDescription: "Official Peshawar Zalmi Yellow Kit",
     stats: {
       matches: 24,
@@ -909,6 +937,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Peshawar Zalmi",
+    previousFranchiseId: "pz",
     kitDescription: "Official Peshawar Zalmi Yellow Kit",
     stats: {
       matches: 34,
@@ -941,6 +970,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Peshawar Zalmi",
+    previousFranchiseId: "pz",
     kitDescription: "Official Peshawar Zalmi Yellow Kit",
     stats: {
       matches: 22,
@@ -973,6 +1003,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Lahore Qalandars",
+    previousFranchiseId: "lq",
     kitDescription: "Official Lahore Qalandars Green Kit",
     stats: {
       matches: 37,
@@ -1003,6 +1034,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Multan Sultans",
+    previousFranchiseId: "ms",
     kitDescription: "Official Multan Sultans Green/Gold Kit",
     stats: {
       matches: 32,
@@ -1033,6 +1065,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Multan Sultans",
+    previousFranchiseId: "ms",
     kitDescription: "Official Multan Sultans Green/Gold Kit",
     stats: {
       matches: 14,
@@ -1063,6 +1096,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Multan Sultans",
+    previousFranchiseId: "ms",
     kitDescription: "Official Multan Sultans Green/Gold Kit",
     stats: {
       matches: 19,
@@ -1094,6 +1128,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Islamabad United",
+    previousFranchiseId: "iu",
     kitDescription: "Official Islamabad United Red Kit",
     stats: {
       matches: 71,
@@ -1127,6 +1162,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Lahore Qalandars",
+    previousFranchiseId: "lq",
     kitDescription: "Official Lahore Qalandars Green Kit",
     stats: {
       matches: 25,
@@ -1158,6 +1194,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Karachi Kings",
+    previousFranchiseId: "kk",
     kitDescription: "Official Karachi Kings Blue/Red Kit",
     stats: {
       matches: 26,
@@ -1188,6 +1225,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Quetta Gladiators",
+    previousFranchiseId: "qg",
     kitDescription: "Official Quetta Gladiators Purple/Gold Kit",
     stats: {
       matches: 42,
@@ -1219,6 +1257,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Quetta Gladiators",
+    previousFranchiseId: "qg",
     kitDescription: "Official Quetta Gladiators Purple/Gold Kit",
     stats: {
       matches: 82,
@@ -1255,6 +1294,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Islamabad United",
+    previousFranchiseId: "iu",
     kitDescription: "Official Islamabad United Red Kit",
     stats: {
       matches: 48,
@@ -1285,6 +1325,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Peshawar Zalmi",
+    previousFranchiseId: "pz",
     kitDescription: "Official Peshawar Zalmi Yellow Kit",
     stats: {
       matches: 24,
@@ -1315,6 +1356,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Peshawar Zalmi",
+    previousFranchiseId: "pz",
     kitDescription: "Official Peshawar Zalmi Yellow Kit",
     stats: {
       matches: 11,
@@ -1345,6 +1387,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Lahore Qalandars",
+    previousFranchiseId: "lq",
     kitDescription: "Official Lahore Qalandars Green Kit",
     stats: {
       matches: 17,
@@ -1376,6 +1419,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Multan Sultans",
+    previousFranchiseId: "ms",
     kitDescription: "Official Multan Sultans Green/Gold Kit",
     stats: {
       matches: 10,
@@ -1406,6 +1450,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Multan Sultans",
+    previousFranchiseId: "ms",
     kitDescription: "Official Multan Sultans Green/Gold Kit",
     stats: {
       matches: 16,
@@ -1436,6 +1481,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Karachi Kings",
+    previousFranchiseId: "kk",
     kitDescription: "Official Karachi Kings Blue/Red Kit",
     stats: {
       matches: 24,
@@ -1471,6 +1517,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Multan Sultans",
+    previousFranchiseId: "ms",
     kitDescription: "Official Multan Sultans Green/Gold Kit",
     stats: {
       matches: 12,
@@ -1502,6 +1549,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Islamabad United",
+    previousFranchiseId: "iu",
     kitDescription: "Official Islamabad United Red Kit",
     stats: {
       matches: 8,
@@ -1532,6 +1580,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Islamabad United",
+    previousFranchiseId: "iu",
     kitDescription: "Official Islamabad United Red Kit",
     stats: {
       matches: 10,
@@ -1562,6 +1611,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Lahore Qalandars",
+    previousFranchiseId: "lq",
     kitDescription: "Official Lahore Qalandars Green Kit",
     stats: {
       matches: 9,
@@ -1594,6 +1644,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Peshawar Zalmi",
+    previousFranchiseId: "pz",
     kitDescription: "Official Peshawar Zalmi Yellow Kit",
     stats: {
       matches: 8,
@@ -1624,6 +1675,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Quetta Gladiators",
+    previousFranchiseId: "qg",
     kitDescription: "Official Quetta Gladiators Purple/Gold Kit",
     stats: {
       matches: 10,
@@ -1655,6 +1707,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Peshawar Zalmi",
+    previousFranchiseId: "pz",
     kitDescription: "Official Peshawar Zalmi Yellow Kit",
     stats: {
       matches: 5,
@@ -1685,6 +1738,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Peshawar Zalmi",
+    previousFranchiseId: "pz",
     kitDescription: "Official Peshawar Zalmi Yellow Kit",
     stats: {
       matches: 12,
@@ -1717,6 +1771,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Karachi Kings",
+    previousFranchiseId: "kk",
     kitDescription: "Official Karachi Kings Blue/Red Kit",
     stats: {
       matches: 6,
@@ -1748,6 +1803,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Multan Sultans",
+    previousFranchiseId: "ms",
     kitDescription: "Official Multan Sultans Green/Gold Kit",
     stats: {
       matches: 6,
@@ -1778,6 +1834,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Lahore Qalandars",
+    previousFranchiseId: "lq",
     kitDescription: "Official Lahore Qalandars Green Kit",
     stats: {
       matches: 12,
@@ -1809,6 +1866,7 @@ export const INITIAL_PLAYERS: Player[] = [
     hasPlayedPSL: true,
     statsType: "PSL",
     lastPSLTeam: "Multan Sultans",
+    previousFranchiseId: "ms",
     kitDescription: "Official Multan Sultans Green/Gold Kit",
     stats: {
       matches: 17,

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from "react";
@@ -14,6 +13,8 @@ import {
   Coins,
   ShieldAlert,
   LogIn,
+  Sparkles,
+  Users,
 } from "lucide-react";
 
 export const BidControls: React.FC = () => {
@@ -22,6 +23,7 @@ export const BidControls: React.FC = () => {
     activeFranchise,
     authenticatedFranchiseId,
     franchises,
+    players,
     currentPlayer,
     highestBid,
     franchiseStatuses,
@@ -36,6 +38,8 @@ export const BidControls: React.FC = () => {
   const [bidSuccess, setBidSuccess] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [adminSelectedTeamId, setAdminSelectedTeamId] = useState<string>(franchises[0]?.id || "iu");
+  const [showCustomBid, setShowCustomBid] = useState(false);
+  const [customBidAmount, setCustomBidAmount] = useState<number | "">("");
 
   // Determine which franchise is acting
   const currentActingFranchise =
@@ -44,6 +48,20 @@ export const BidControls: React.FC = () => {
       : role === "admin"
         ? franchises.find((f) => f.id === adminSelectedTeamId)
         : undefined;
+
+  // Franchise squad & quota metrics
+  const currentSquad = currentActingFranchise
+    ? players.filter((p) => p.soldToFranchiseId === currentActingFranchise.id)
+    : [];
+  const currentOverseas = currentSquad.filter((p) => p.isOverseas);
+  const spentPurse = currentActingFranchise
+    ? currentActingFranchise.initialPurse - currentActingFranchise.remainingPurse
+    : 0;
+  const minSlotsRequired = currentActingFranchise
+    ? Math.max(0, currentActingFranchise.minSquadSize - currentSquad.length)
+    : 0;
+  const maxOverseasAllowed = currentActingFranchise?.maxOverseas || 7;
+  const overseasSlotsLeft = Math.max(0, maxOverseasAllowed - currentOverseas.length);
 
   // Spectator View
   if (role === "spectator" || !currentActingFranchise) {
@@ -150,6 +168,42 @@ export const BidControls: React.FC = () => {
         </div>
       </div>
 
+      {/* Real-time Franchise Owner Key Metrics Ledger */}
+      <div className="mt-3.5 p-3 rounded-2xl bg-slate-950/80 border border-slate-800/90 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+        <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
+          <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Purse</span>
+          <span className="font-black text-white">{formatPKR(currentActingFranchise.initialPurse)}</span>
+        </div>
+        <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
+          <span className="text-[10px] uppercase font-bold text-slate-400 block">Spent</span>
+          <span className="font-black text-slate-300">{formatPKR(spentPurse)}</span>
+        </div>
+        <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
+          <span className="text-[10px] uppercase font-bold text-slate-400 block">Squad Quota</span>
+          <span className="font-black text-emerald-400">
+            {currentSquad.length} / {currentActingFranchise.maxSquadSize}
+          </span>
+        </div>
+        <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
+          <span className="text-[10px] uppercase font-bold text-slate-400 block">Min Left to 16</span>
+          <span className={`font-black ${minSlotsRequired > 0 ? "text-amber-400" : "text-emerald-400"}`}>
+            {minSlotsRequired > 0 ? `${minSlotsRequired} needed` : "Quota Met"}
+          </span>
+        </div>
+        <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800 col-span-1 sm:col-span-2">
+          <span className="text-[10px] uppercase font-bold text-slate-400 block">Overseas Slots Left</span>
+          <span className="font-bold text-cyan-400">
+            {overseasSlotsLeft} left ({currentOverseas.length}/{maxOverseasAllowed})
+          </span>
+        </div>
+        <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800 col-span-1 sm:col-span-2">
+          <span className="text-[10px] uppercase font-bold text-slate-400 block">RTM Cards</span>
+          <span className="font-bold text-amber-300 flex items-center justify-center gap-1">
+            <Sparkles className="w-3 h-3 text-amber-400" /> {currentActingFranchise.rtmCardsLeft ?? 2} Remaining
+          </span>
+        </div>
+      </div>
+
       {/* Admin Simulator Team Selector if role is admin */}
       {role === "admin" && (
         <div className="mt-3 flex items-center gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800 text-xs">
@@ -170,13 +224,13 @@ export const BidControls: React.FC = () => {
 
       {/* Feedback Messages */}
       {bidError && (
-        <div className="mt-4 p-3 rounded-xl bg-red-950/60 border border-red-500/50 flex items-center gap-2 text-xs text-red-300 font-semibold animate-shake">
+        <div className="mt-3.5 p-3 rounded-xl bg-red-950/60 border border-red-500/50 flex items-center gap-2 text-xs text-red-300 font-semibold animate-shake">
           <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
           <span>{bidError}</span>
         </div>
       )}
       {bidSuccess && (
-        <div className="mt-4 p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/50 flex items-center gap-2 text-xs text-emerald-300 font-semibold">
+        <div className="mt-3.5 p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/50 flex items-center gap-2 text-xs text-emerald-300 font-semibold">
           <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>{bidSuccess}</span>
         </div>
@@ -187,14 +241,15 @@ export const BidControls: React.FC = () => {
         <button
           disabled={auctionStatus !== "Live" || !isTimerRunning || isOut || isLeading}
           onClick={() => handlePlaceBid(nextBidAmount)}
-          className={`w-full py-4 px-6 rounded-2xl font-black text-base uppercase tracking-wider flex items-center justify-between transition-all duration-200 shadow-xl ${isLeading
+          className={`w-full py-4 px-6 rounded-2xl font-black text-base uppercase tracking-wider flex items-center justify-between transition-all duration-200 shadow-xl ${
+            isLeading
               ? "bg-emerald-950/40 border border-emerald-500/40 text-emerald-400 cursor-not-allowed opacity-90"
               : isOut
                 ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"
                 : auctionStatus !== "Live" || !isTimerRunning
                   ? "bg-slate-800 text-slate-500 cursor-not-allowed"
                   : "bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 shadow-emerald-500/25 active:scale-[0.99]"
-            }`}
+          }`}
         >
           <div className="flex items-center gap-2">
             <Gavel className="w-5 h-5" />
@@ -214,7 +269,7 @@ export const BidControls: React.FC = () => {
         </button>
       </div>
 
-      {/* Quick Increments based on Section 5 rules */}
+      {/* Quick Increments */}
       {!isOut && !isLeading && auctionStatus === "Live" && (
         <div className="mt-3 grid grid-cols-3 gap-2">
           <button
@@ -238,7 +293,56 @@ export const BidControls: React.FC = () => {
         </div>
       )}
 
-      {/* Skip and Out Controls (Section 13) */}
+      {/* Custom Bid Input Option */}
+      {!isOut && !isLeading && auctionStatus === "Live" && (
+        <div className="mt-2.5">
+          {!showCustomBid ? (
+            <button
+              onClick={() => setShowCustomBid(true)}
+              className="text-xs text-slate-400 hover:text-emerald-400 underline font-semibold transition-colors block text-center w-full"
+            >
+              + Enter custom bid amount
+            </button>
+          ) : (
+            <div className="p-3 bg-slate-950 rounded-xl border border-slate-700/80 space-y-2 animate-fadeIn">
+              <div className="flex items-center justify-between text-xs text-slate-300">
+                <span className="font-bold">Custom Bid Amount (PKR):</span>
+                <button
+                  onClick={() => setShowCustomBid(false)}
+                  className="text-slate-500 hover:text-white"
+                >
+                  ✕ Close
+                </button>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  placeholder={`Min ${nextBidAmount}`}
+                  value={customBidAmount}
+                  onChange={(e) => setCustomBidAmount(e.target.value === "" ? "" : Number(e.target.value))}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                />
+                <button
+                  onClick={() => {
+                    if (typeof customBidAmount === "number" && customBidAmount >= nextBidAmount) {
+                      handlePlaceBid(customBidAmount);
+                      setShowCustomBid(false);
+                      setCustomBidAmount("");
+                    } else {
+                      setBidError(`Custom bid must be at least ${formatPKR(nextBidAmount)}!`);
+                    }
+                  }}
+                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase rounded-lg shrink-0"
+                >
+                  Bid
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Skip and Out Controls */}
       <div className="mt-4 pt-4 border-t border-slate-800/80 grid grid-cols-2 gap-3">
         <button
           disabled={auctionStatus !== "Live" || isOut || isSkipped || isLeading}
@@ -262,7 +366,7 @@ export const BidControls: React.FC = () => {
       </div>
 
       <p className="text-[10px] text-slate-500 text-center mt-3">
-        PSL Official Increments & Reserve Purse rules validated on server.
+        PSL Official Increments &amp; Reserve Purse rules validated on server.
       </p>
     </div>
   );

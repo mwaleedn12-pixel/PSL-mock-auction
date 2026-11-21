@@ -57,6 +57,8 @@ export interface Player {
   kitDescription?: string;
   // ESPNcricinfo profile link
   cricinfoUrl?: string;
+  // Right to Match (RTM) previous franchise
+  previousFranchiseId?: string;
 }
 
 export interface Franchise {
@@ -79,6 +81,9 @@ export interface Franchise {
   captainId?: string;
   viceCaptainId?: string;
   privatePasskey: string;
+  // RTM (Right to Match) Cards
+  rtmCardsLeft?: number;
+  initialRtmCards?: number;
 }
 
 export interface Bid {
@@ -115,6 +120,24 @@ export interface AuctionSettings {
   autoSellOnAllOut: boolean;
   soundEffectsEnabled: boolean;
   voiceAnnouncements: boolean;
+  // Player Occurrence Order: Sequential or Randomized draw
+  playerOccurrenceOrder: 'sequential' | 'random';
+  // RTM (Right to Match) framework
+  enableRTM: boolean;
+  rtmCardsPerFranchise: number;
+  scheduledStartTime?: string;
+}
+
+export interface RtmState {
+  active: boolean;
+  playerId: string;
+  originalFranchiseId: string;
+  originalFranchiseName: string;
+  highestBidderFranchiseId: string;
+  highestBidderFranchiseName: string;
+  initialBidAmount: number;
+  revisedBidAmount?: number;
+  stage: 'prompt_rtm' | 'awaiting_raise' | 'rtm_decision';
 }
 
 export interface WatchlistItem {
@@ -142,7 +165,7 @@ export interface TradeOffer {
 export interface AuctionEventLog {
   id: string;
   timestamp: number;
-  type: 'bid' | 'out' | 'skip' | 'sold' | 'unsold' | 'pause' | 'resume' | 'start' | 'round2' | 'trade' | 'retention' | 'admin';
+  type: 'bid' | 'out' | 'skip' | 'sold' | 'unsold' | 'pause' | 'resume' | 'start' | 'round2' | 'trade' | 'retention' | 'admin' | 'rtm';
   playerId?: string;
   playerName?: string;
   franchiseId?: string;

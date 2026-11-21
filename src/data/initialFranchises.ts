@@ -19,6 +19,8 @@ export const INITIAL_FRANCHISES: Franchise[] = [
     maxOverseas: 7,
     playingXI: [],
     privatePasskey: "IU-2027",
+    rtmCardsLeft: 2,
+    initialRtmCards: 2,
   },
   {
     id: "kk",
@@ -38,6 +40,8 @@ export const INITIAL_FRANCHISES: Franchise[] = [
     maxOverseas: 7,
     playingXI: [],
     privatePasskey: "KK-2027",
+    rtmCardsLeft: 2,
+    initialRtmCards: 2,
   },
   {
     id: "lq",
@@ -57,6 +61,8 @@ export const INITIAL_FRANCHISES: Franchise[] = [
     maxOverseas: 7,
     playingXI: [],
     privatePasskey: "LQ-2027",
+    rtmCardsLeft: 2,
+    initialRtmCards: 2,
   },
   {
     id: "pz",
@@ -76,6 +82,8 @@ export const INITIAL_FRANCHISES: Franchise[] = [
     maxOverseas: 7,
     playingXI: [],
     privatePasskey: "PZ-2027",
+    rtmCardsLeft: 2,
+    initialRtmCards: 2,
   },
   {
     id: "qg",
@@ -95,6 +103,8 @@ export const INITIAL_FRANCHISES: Franchise[] = [
     maxOverseas: 7,
     playingXI: [],
     privatePasskey: "QG-2027",
+    rtmCardsLeft: 2,
+    initialRtmCards: 2,
   },
   {
     id: "raw",
@@ -114,6 +124,8 @@ export const INITIAL_FRANCHISES: Franchise[] = [
     maxOverseas: 7,
     playingXI: [],
     privatePasskey: "RAW-2027",
+    rtmCardsLeft: 2,
+    initialRtmCards: 2,
   },
   {
     id: "ms",
@@ -133,6 +145,8 @@ export const INITIAL_FRANCHISES: Franchise[] = [
     maxOverseas: 7,
     playingXI: [],
     privatePasskey: "MS-2027",
+    rtmCardsLeft: 2,
+    initialRtmCards: 2,
   },
   {
     id: "hhk",
@@ -152,5 +166,7 @@ export const INITIAL_FRANCHISES: Franchise[] = [
     maxOverseas: 7,
     playingXI: [],
     privatePasskey: "HHK-2027",
+    rtmCardsLeft: 2,
+    initialRtmCards: 2,
   },
 ];

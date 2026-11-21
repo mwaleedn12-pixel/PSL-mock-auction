@@ -12,6 +12,7 @@ import {
   WatchlistItem,
   TradeOffer,
   RulePreset,
+  RtmState,
 } from "@/types/auction";
 import { INITIAL_FRANCHISES } from "@/data/initialFranchises";
 import { INITIAL_PLAYERS } from "@/data/initialPlayers";
@@ -45,6 +46,19 @@ interface AuctionContextType {
   watchlists: WatchlistItem[];
   tradeOffers: TradeOffer[];
   eventLogs: AuctionEventLog[];
+
+  // Right to Match (RTM) State & Actions
+  rtmState: RtmState | null;
+  exerciseRtm: () => void;
+  declineRtmInitial: () => void;
+  submitRtmRaise: (newAmount: number) => { success: boolean; message: string };
+  acceptRtmFinal: () => void;
+  declineRtmFinal: () => void;
+  cancelRtm: () => void;
+
+  // Player Queue Organization
+  shuffleUpcomingPlayers: () => void;
+  reEnterUnsoldPlayers: (selectedPlayerIds?: string[], discountPercent?: number) => void;
 
   // Actions
   startAuction: () => void;
@@ -97,6 +111,10 @@ const DEFAULT_SETTINGS: AuctionSettings = {
   autoSellOnAllOut: true,
   soundEffectsEnabled: true,
   voiceAnnouncements: true,
+  playerOccurrenceOrder: "sequential",
+  enableRTM: true,
+  rtmCardsPerFranchise: 2,
+  scheduledStartTime: "",
 };
 
 const STORAGE_KEY = "psl_12_mock_auction_state_v2";
@@ -122,11 +140,13 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [watchlists, setWatchlists] = useState<WatchlistItem[]>([]);
   const [tradeOffers, setTradeOffers] = useState<TradeOffer[]>([]);
   const [eventLogs, setEventLogs] = useState<AuctionEventLog[]>([]);
+  // Right to Match (RTM) active state
+  const [rtmState, setRtmState] = useState<RtmState | null>(null);
 
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load state from LocalStorage on mount
+  // Load state from LocalStorage on mount + URL parameter login detection
   useEffect(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -146,8 +166,37 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (parsed.eventLogs) setEventLogs(parsed.eventLogs);
           if (parsed.role) setRole(parsed.role);
           if (parsed.authenticatedFranchiseId) setAuthenticatedFranchiseId(parsed.authenticatedFranchiseId);
+          if (parsed.rtmState !== undefined) setRtmState(parsed.rtmState);
         } catch {}
       }
+
+      // Check URL query parameters for instant franchise link join or spectator mode
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const joinKey = urlParams.get("join") || urlParams.get("passkey") || urlParams.get("code");
+        const teamId = urlParams.get("team");
+        const requestedRole = urlParams.get("role");
+
+        if (joinKey) {
+          const cleanKey = joinKey.trim().toUpperCase();
+          const matched = INITIAL_FRANCHISES.find(
+            (f) => f.privatePasskey.toUpperCase() === cleanKey || f.id.toUpperCase() === cleanKey
+          );
+          if (matched) {
+            setRole("team_owner");
+            setAuthenticatedFranchiseId(matched.id);
+          }
+        } else if (teamId) {
+          const matched = INITIAL_FRANCHISES.find((f) => f.id.toLowerCase() === teamId.toLowerCase());
+          if (matched) {
+            setRole("team_owner");
+            setAuthenticatedFranchiseId(matched.id);
+          }
+        } else if (requestedRole === "spectator") {
+          setRole("spectator");
+          setAuthenticatedFranchiseId(null);
+        }
+      } catch {}
 
       // Initialize cross-tab BroadcastChannel
       try {
@@ -165,6 +214,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
             if (typeof syncData.timer === "number") setTimer(syncData.timer);
             if (typeof syncData.isTimerRunning === "boolean") setIsTimerRunning(syncData.isTimerRunning);
             if (syncData.eventLogs) setEventLogs(syncData.eventLogs);
+            if ("rtmState" in syncData) setRtmState(syncData.rtmState);
           }
         };
       } catch {}
@@ -194,12 +244,13 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         eventLogs,
         role,
         authenticatedFranchiseId,
+        rtmState,
       };
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
       } catch {}
     }
-  }, [franchises, players, auctionStatus, currentPlayerIndex, currentBids, franchiseStatuses, settings, rulePreset, watchlists, tradeOffers, eventLogs, role, authenticatedFranchiseId]);
+  }, [franchises, players, auctionStatus, currentPlayerIndex, currentBids, franchiseStatuses, settings, rulePreset, watchlists, tradeOffers, eventLogs, role, authenticatedFranchiseId, rtmState]);
 
   useEffect(() => {
     persistState();
@@ -306,105 +357,13 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Finalize current player (Sold or Unsold)
-  const finalizePlayer = useCallback(
-    (forceSold?: boolean, winningBidParam?: Bid | null) => {
-      const current = players[currentPlayerIndex];
-      if (!current) return;
-
-      const finalBid = winningBidParam !== undefined ? winningBidParam : (currentBids.length > 0 ? currentBids[currentBids.length - 1] : null);
-      const isSold = forceSold !== undefined ? forceSold : !!finalBid;
-
-      setIsTimerRunning(false);
-
-      if (isSold && finalBid) {
-        const winningTeam = franchises.find((f) => f.id === finalBid.franchiseId);
-        soundEngine.playGavelHammerSound();
-        soundEngine.playSoldFanfare();
-        soundEngine.speakAnnouncement(`${current.name} sold to ${finalBid.franchiseName} for PKR ${(finalBid.amount / 10000000).toFixed(2)} Crore!`);
-
-        if (typeof window !== "undefined") {
-          try {
-            confetti({
-              particleCount: 80,
-              spread: 70,
-              origin: { y: 0.6 },
-              colors: [winningTeam?.primaryColor || "#10b981", "#fbbf24", "#ffffff"],
-            });
-          } catch {}
-        }
-
-        // Deduct purse & increment squad
-        setFranchises((prev) =>
-          prev.map((f) => {
-            if (f.id === finalBid.franchiseId) {
-              return {
-                ...f,
-                remainingPurse: f.remainingPurse - finalBid.amount,
-                squadCount: f.squadCount + 1,
-              };
-            }
-            return f;
-          })
-        );
-
-        // Update player record
-        setPlayers((prev) =>
-          prev.map((p, idx) => {
-            if (idx === currentPlayerIndex) {
-              return {
-                ...p,
-                status: "sold",
-                soldToFranchiseId: finalBid.franchiseId,
-                soldPrice: finalBid.amount,
-                currentPrice: finalBid.amount,
-              };
-            }
-            return p;
-          })
-        );
-
-        addLog("sold", `${current.name} sold to ${finalBid.franchiseName} for ${(finalBid.amount / 10000000).toFixed(2)} Cr`, {
-          playerId: current.id,
-          playerName: current.name,
-          franchiseId: finalBid.franchiseId,
-          franchiseName: finalBid.franchiseName,
-          amount: finalBid.amount,
-        });
-      } else {
-        soundEngine.playGavelHammerSound();
-        soundEngine.speakAnnouncement(`${current.name} marked unsold.`);
-
-        setPlayers((prev) =>
-          prev.map((p, idx) => {
-            if (idx === currentPlayerIndex) {
-              return { ...p, status: "unsold" };
-            }
-            return p;
-          })
-        );
-
-        addLog("unsold", `${current.name} marked UNSOLD.`, {
-          playerId: current.id,
-          playerName: current.name,
-        });
-      }
-
-      // Transition to next player after brief pause
-      setTimeout(() => {
-        goToNextPlayer();
-      }, 3500);
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [players, currentPlayerIndex, currentBids, franchises]
-  );
-
   // Navigate to Next Player
   const goToNextPlayer = useCallback(() => {
     setCurrentBids([]);
     setFranchiseStatuses({});
     setTimer(settings.defaultTimerSeconds);
     setIsTimerRunning(false);
+    setRtmState(null);
 
     let nextIdx = currentPlayerIndex + 1;
     while (nextIdx < players.length && players[nextIdx].status !== "upcoming") {
@@ -423,6 +382,279 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       addLog("admin", "Auction completed. All players processed.");
     }
   }, [currentPlayerIndex, players, auctionStatus, settings.defaultTimerSeconds]);
+
+  // Helper to complete a confirmed sale (direct or via RTM)
+  const completePlayerSale = useCallback(
+    (playerToSell: Player, soldToFranchiseId: string, soldPrice: number, isRtmSale: boolean = false) => {
+      const winningTeam = franchises.find((f) => f.id === soldToFranchiseId);
+      soundEngine.playGavelHammerSound();
+      soundEngine.playSoldFanfare();
+      soundEngine.speakAnnouncement(
+        `${playerToSell.name} sold to ${winningTeam?.name || "franchise"} for PKR ${(soldPrice / 10000000).toFixed(2)} Crore${isRtmSale ? " via Right to Match!" : "!"}`
+      );
+
+      if (typeof window !== "undefined") {
+        try {
+          confetti({
+            particleCount: 90,
+            spread: 80,
+            origin: { y: 0.6 },
+            colors: [winningTeam?.primaryColor || "#10b981", "#fbbf24", "#ffffff"],
+          });
+        } catch {}
+      }
+
+      // Deduct purse, increment squad count, decrement RTM card if used
+      setFranchises((prev) =>
+        prev.map((f) => {
+          if (f.id === soldToFranchiseId) {
+            return {
+              ...f,
+              remainingPurse: f.remainingPurse - soldPrice,
+              squadCount: f.squadCount + 1,
+              rtmCardsLeft: isRtmSale ? Math.max(0, (f.rtmCardsLeft ?? 2) - 1) : f.rtmCardsLeft,
+            };
+          }
+          return f;
+        })
+      );
+
+      // Update player record
+      setPlayers((prev) =>
+        prev.map((p) => {
+          if (p.id === playerToSell.id) {
+            return {
+              ...p,
+              status: "sold",
+              soldToFranchiseId: soldToFranchiseId,
+              soldPrice: soldPrice,
+              currentPrice: soldPrice,
+            };
+          }
+          return p;
+        })
+      );
+
+      addLog(
+        "sold",
+        `${playerToSell.name} sold to ${winningTeam?.name || soldToFranchiseId} for ${(soldPrice / 10000000).toFixed(2)} Cr${isRtmSale ? " (RTM Card Exercised)" : ""}`,
+        {
+          playerId: playerToSell.id,
+          playerName: playerToSell.name,
+          franchiseId: soldToFranchiseId,
+          franchiseName: winningTeam?.name,
+          amount: soldPrice,
+        }
+      );
+
+      setRtmState(null);
+      broadcastSync({ rtmState: null });
+
+      setTimeout(() => {
+        goToNextPlayer();
+      }, 3500);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [franchises, goToNextPlayer]
+  );
+
+  // Finalize current player (Sold, Unsold, or Trigger RTM)
+  const finalizePlayer = useCallback(
+    (forceSold?: boolean, winningBidParam?: Bid | null) => {
+      const current = players[currentPlayerIndex];
+      if (!current) return;
+
+      const finalBid = winningBidParam !== undefined ? winningBidParam : (currentBids.length > 0 ? currentBids[currentBids.length - 1] : null);
+      const isSold = forceSold !== undefined ? forceSold : !!finalBid;
+
+      setIsTimerRunning(false);
+
+      if (isSold && finalBid) {
+        // Check RTM (Right to Match) criteria
+        if (
+          settings.enableRTM &&
+          current.previousFranchiseId &&
+          current.previousFranchiseId !== finalBid.franchiseId
+        ) {
+          const originalFranchise = franchises.find((f) => f.id === current.previousFranchiseId);
+          if (
+            originalFranchise &&
+            (originalFranchise.rtmCardsLeft ?? 2) > 0 &&
+            originalFranchise.remainingPurse >= finalBid.amount
+          ) {
+            const newRtm: RtmState = {
+              active: true,
+              playerId: current.id,
+              originalFranchiseId: originalFranchise.id,
+              originalFranchiseName: originalFranchise.name,
+              highestBidderFranchiseId: finalBid.franchiseId,
+              highestBidderFranchiseName: finalBid.franchiseName,
+              initialBidAmount: finalBid.amount,
+              stage: "prompt_rtm",
+            };
+            setRtmState(newRtm);
+            soundEngine.playRtmAlert();
+            soundEngine.speakAnnouncement(
+              `${originalFranchise.name} has the Right to Match for ${current.name}!`
+            );
+            addLog(
+              "rtm",
+              `RTM Available: ${originalFranchise.name} can match ${finalBid.franchiseName}'s bid of PKR ${(finalBid.amount / 10000000).toFixed(2)} Cr for ${current.name}`,
+              {
+                playerId: current.id,
+                playerName: current.name,
+                franchiseId: originalFranchise.id,
+                franchiseName: originalFranchise.name,
+                amount: finalBid.amount,
+              }
+            );
+            broadcastSync({ rtmState: newRtm });
+            return;
+          }
+        }
+
+        // Direct standard sale
+        completePlayerSale(current, finalBid.franchiseId, finalBid.amount, false);
+      } else {
+        soundEngine.playGavelHammerSound();
+        soundEngine.speakAnnouncement(`${current.name} marked unsold.`);
+
+        setPlayers((prev) =>
+          prev.map((p, idx) => {
+            if (idx === currentPlayerIndex) {
+              return { ...p, status: "unsold" };
+            }
+            return p;
+          })
+        );
+
+        addLog("unsold", `${current.name} marked UNSOLD.`, {
+          playerId: current.id,
+          playerName: current.name,
+        });
+
+        setTimeout(() => {
+          goToNextPlayer();
+        }, 3500);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [players, currentPlayerIndex, currentBids, franchises, settings.enableRTM, completePlayerSale, goToNextPlayer]
+  );
+
+  // RTM Action Handlers
+  const exerciseRtm = () => {
+    if (!rtmState || rtmState.stage !== "prompt_rtm") return;
+    const nextState: RtmState = {
+      ...rtmState,
+      stage: "awaiting_raise",
+    };
+    setRtmState(nextState);
+    soundEngine.playRtmAlert();
+    soundEngine.speakAnnouncement(
+      `${rtmState.originalFranchiseName} has exercised Right to Match! ${rtmState.highestBidderFranchiseName}, enter your final revised bid.`
+    );
+    addLog(
+      "rtm",
+      `${rtmState.originalFranchiseName} exercised RTM for ${currentPlayer?.name}! Awaiting final price raise from ${rtmState.highestBidderFranchiseName}.`,
+      {
+        franchiseId: rtmState.originalFranchiseId,
+        franchiseName: rtmState.originalFranchiseName,
+      }
+    );
+    broadcastSync({ rtmState: nextState });
+  };
+
+  const declineRtmInitial = () => {
+    if (!rtmState || rtmState.stage !== "prompt_rtm") return;
+    addLog(
+      "rtm",
+      `${rtmState.originalFranchiseName} declined RTM for ${currentPlayer?.name}. Selling to ${rtmState.highestBidderFranchiseName}.`,
+      {
+        franchiseId: rtmState.originalFranchiseId,
+        franchiseName: rtmState.originalFranchiseName,
+      }
+    );
+    const current = players.find((p) => p.id === rtmState.playerId);
+    if (current) {
+      completePlayerSale(current, rtmState.highestBidderFranchiseId, rtmState.initialBidAmount, false);
+    }
+  };
+
+  const submitRtmRaise = (newAmount: number): { success: boolean; message: string } => {
+    if (!rtmState || rtmState.stage !== "awaiting_raise") {
+      return { success: false, message: "RTM is not awaiting a revised bid." };
+    }
+    if (newAmount <= rtmState.initialBidAmount) {
+      return {
+        success: false,
+        message: `Revised bid must be strictly greater than current bid of PKR ${(rtmState.initialBidAmount / 10000000).toFixed(2)} Crore!`,
+      };
+    }
+
+    const highestBidderTeam = franchises.find((f) => f.id === rtmState.highestBidderFranchiseId);
+    if (highestBidderTeam && highestBidderTeam.remainingPurse < newAmount) {
+      return {
+        success: false,
+        message: `${rtmState.highestBidderFranchiseName} does not have sufficient remaining purse for PKR ${(newAmount / 10000000).toFixed(2)} Cr!`,
+      };
+    }
+
+    const nextState: RtmState = {
+      ...rtmState,
+      revisedBidAmount: newAmount,
+      stage: "rtm_decision",
+    };
+    setRtmState(nextState);
+    soundEngine.playBidSound();
+    soundEngine.speakAnnouncement(
+      `${rtmState.highestBidderFranchiseName} has raised the price to PKR ${(newAmount / 10000000).toFixed(2)} Crore! ${rtmState.originalFranchiseName}, do you accept?`
+    );
+    addLog(
+      "rtm",
+      `${rtmState.highestBidderFranchiseName} raised final bid to PKR ${(newAmount / 10000000).toFixed(2)} Cr. ${rtmState.originalFranchiseName} deciding to match.`,
+      {
+        franchiseId: rtmState.highestBidderFranchiseId,
+        franchiseName: rtmState.highestBidderFranchiseName,
+        amount: newAmount,
+      }
+    );
+    broadcastSync({ rtmState: nextState });
+    return { success: true, message: `Final price raised to PKR ${(newAmount / 10000000).toFixed(2)} Cr.` };
+  };
+
+  const acceptRtmFinal = () => {
+    if (!rtmState || rtmState.stage !== "rtm_decision" || !rtmState.revisedBidAmount) return;
+    const current = players.find((p) => p.id === rtmState.playerId);
+    if (current) {
+      completePlayerSale(current, rtmState.originalFranchiseId, rtmState.revisedBidAmount, true);
+    }
+  };
+
+  const declineRtmFinal = () => {
+    if (!rtmState || rtmState.stage !== "rtm_decision" || !rtmState.revisedBidAmount) return;
+    addLog(
+      "rtm",
+      `${rtmState.originalFranchiseName} declined to match PKR ${(rtmState.revisedBidAmount / 10000000).toFixed(2)} Cr. Sold to ${rtmState.highestBidderFranchiseName}!`,
+      {
+        franchiseId: rtmState.originalFranchiseId,
+        franchiseName: rtmState.originalFranchiseName,
+        amount: rtmState.revisedBidAmount,
+      }
+    );
+    const current = players.find((p) => p.id === rtmState.playerId);
+    if (current) {
+      completePlayerSale(current, rtmState.highestBidderFranchiseId, rtmState.revisedBidAmount, false);
+    }
+  };
+
+  const cancelRtm = () => {
+    if (!rtmState) return;
+    const current = players.find((p) => p.id === rtmState.playerId);
+    if (current) {
+      completePlayerSale(current, rtmState.highestBidderFranchiseId, rtmState.initialBidAmount, false);
+    }
+  };
 
   const goToPreviousPlayer = () => {
     if (currentPlayerIndex > 0) {
@@ -625,7 +857,67 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
+  const shuffleUpcomingPlayers = () => {
+    setPlayers((prev) => {
+      // Collect upcoming players
+      const upcoming = prev.filter((p) => p.status === "upcoming");
+      // Fisher-Yates shuffle
+      for (let i = upcoming.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [upcoming[i], upcoming[j]] = [upcoming[j], upcoming[i]];
+      }
+      let uIdx = 0;
+      return prev.map((p) => (p.status === "upcoming" ? upcoming[uIdx++] : p));
+    });
+    addLog("admin", "Upcoming player pool order randomized (Pot Draw Order).");
+  };
+
+  const reEnterUnsoldPlayers = (selectedPlayerIds?: string[], discountPercent: number = 0) => {
+    setPlayers((prev) =>
+      prev.map((p) => {
+        const shouldReEnter =
+          p.status === "unsold" &&
+          (!selectedPlayerIds || selectedPlayerIds.length === 0 || selectedPlayerIds.includes(p.id));
+
+        if (shouldReEnter) {
+          const discountFactor = Math.max(0.5, 1 - discountPercent / 100);
+          const newPrice = Math.round(p.basePrice * discountFactor);
+          return {
+            ...p,
+            status: "upcoming" as const,
+            auctionRound: (p.auctionRound || 1) + 1,
+            basePrice: newPrice,
+            currentPrice: newPrice,
+          };
+        }
+        return p;
+      })
+    );
+
+    setTimeout(() => {
+      setPlayers((currentList) => {
+        const firstUpcoming = currentList.findIndex((p) => p.status === "upcoming");
+        if (firstUpcoming !== -1) {
+          setCurrentPlayerIndex(firstUpcoming);
+          setCurrentBids([]);
+          setFranchiseStatuses({});
+          setTimer(settings.defaultTimerSeconds);
+          setAuctionStatus("Live");
+          setIsTimerRunning(true);
+        }
+        return currentList;
+      });
+    }, 100);
+
+    const count = selectedPlayerIds && selectedPlayerIds.length > 0 ? selectedPlayerIds.length : "all";
+    addLog("round2", `Accelerated Auction Round started for ${count} unsold players with ${discountPercent}% price adjustment.`);
+    soundEngine.speakAnnouncement(`Accelerated auction round has begun for unsold players!`);
+  };
+
   const startAuction = () => {
+    if (settings.playerOccurrenceOrder === "random") {
+      shuffleUpcomingPlayers();
+    }
     setAuctionStatus("Live");
     setIsTimerRunning(true);
     setTimer(settings.defaultTimerSeconds);
@@ -896,6 +1188,15 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         watchlists,
         tradeOffers,
         eventLogs,
+        rtmState,
+        exerciseRtm,
+        declineRtmInitial,
+        submitRtmRaise,
+        acceptRtmFinal,
+        declineRtmFinal,
+        cancelRtm,
+        shuffleUpcomingPlayers,
+        reEnterUnsoldPlayers,
         startAuction,
         pauseAuction,
         resumeAuction,
