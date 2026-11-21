@@ -22,6 +22,7 @@ export const BidControls: React.FC = () => {
     role,
     activeFranchise,
     authenticatedFranchiseId,
+    switchRoleDirectly,
     franchises,
     players,
     currentPlayer,
@@ -29,6 +30,8 @@ export const BidControls: React.FC = () => {
     franchiseStatuses,
     auctionStatus,
     isTimerRunning,
+    startAuction,
+    resumeAuction,
     placeBid,
     skipCurrentPlayer,
     outCurrentPlayer,
@@ -67,18 +70,45 @@ export const BidControls: React.FC = () => {
   if (role === "spectator" || !currentActingFranchise) {
     return (
       <>
-        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 text-center shadow-xl">
-          <ShieldAlert className="w-9 h-9 text-amber-400 mx-auto mb-2" />
-          <h4 className="text-white font-black text-base">Spectator Mode (Read-Only)</h4>
-          <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-            You are watching the live auction stream. To place bids, participate in auctions, and manage squads, log in with your private team passkey.
-          </p>
-          <button
-            onClick={() => setIsAuthModalOpen(true)}
-            className="mt-4 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider inline-flex items-center gap-2 shadow-lg shadow-emerald-500/20"
-          >
-            <LogIn className="w-4 h-4" /> Join as Team Owner / Admin
-          </button>
+        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 text-center shadow-xl space-y-4">
+          <ShieldAlert className="w-9 h-9 text-amber-400 mx-auto" />
+          <div>
+            <h4 className="text-white font-black text-base">Spectator Mode (Read-Only)</h4>
+            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+              You are viewing the live auction broadcast. To place bids and manage squads, log in or switch to a franchise below.
+            </p>
+          </div>
+
+          <div className="pt-2">
+            <span className="text-[11px] font-bold text-slate-400 block mb-2">
+              ⚡ 1-Click Quick Bidding: Select any franchise to test bids
+            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {franchises.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => switchRoleDirectly("team_owner", f.id)}
+                  style={{ borderColor: `${f.primaryColor}88` }}
+                  className="p-2.5 rounded-xl bg-slate-950/80 hover:bg-slate-800 border text-xs font-bold text-slate-200 hover:text-white flex items-center gap-2 justify-center transition-all hover:scale-[1.02]"
+                >
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: f.primaryColor }}
+                  />
+                  <span>{f.shortName}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider inline-flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+            >
+              <LogIn className="w-4 h-4" /> Enter Team Passkey / Admin Login
+            </button>
+          </div>
         </div>
         <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
       </>
@@ -238,17 +268,30 @@ export const BidControls: React.FC = () => {
 
       {/* Main Bid Action Button */}
       <div className="mt-4">
+        {auctionStatus !== "Live" && (
+          <div className="mb-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs">
+            <span className="text-amber-300 font-bold">
+              ⚠️ Auction is currently {auctionStatus.toLowerCase()}.
+            </span>
+            <button
+              onClick={auctionStatus === "Paused" ? resumeAuction : startAuction}
+              className="px-3 py-1 rounded-lg bg-emerald-500 text-slate-950 font-black hover:bg-emerald-400 transition-colors"
+            >
+              {auctionStatus === "Paused" ? "Resume Auction" : "Start Live Auction"}
+            </button>
+          </div>
+        )}
         <button
-          disabled={auctionStatus !== "Live" || !isTimerRunning || isOut || isLeading}
+          disabled={auctionStatus !== "Live" || isOut || isLeading}
           onClick={() => handlePlaceBid(nextBidAmount)}
           className={`w-full py-4 px-6 rounded-2xl font-black text-base uppercase tracking-wider flex items-center justify-between transition-all duration-200 shadow-xl ${
             isLeading
               ? "bg-emerald-950/40 border border-emerald-500/40 text-emerald-400 cursor-not-allowed opacity-90"
               : isOut
                 ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"
-                : auctionStatus !== "Live" || !isTimerRunning
-                  ? "bg-slate-800 text-slate-500 cursor-not-allowed"
-                  : "bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 shadow-emerald-500/25 active:scale-[0.99]"
+                : auctionStatus !== "Live"
+                  ? "bg-slate-800 text-slate-400 cursor-not-allowed border border-slate-700"
+                  : "bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 shadow-emerald-500/25 active:scale-[0.99] cursor-pointer"
           }`}
         >
           <div className="flex items-center gap-2">
@@ -258,10 +301,12 @@ export const BidControls: React.FC = () => {
                 ? "You Hold Highest Bid"
                 : isOut
                   ? "Out from this Player"
-                  : `Place Bid (${formatPKR(nextBidAmount)})`}
+                  : auctionStatus !== "Live"
+                    ? `Ready to Bid (${formatPKR(nextBidAmount)})`
+                    : `Place Bid (${formatPKR(nextBidAmount)})`}
             </span>
           </div>
-          {!isLeading && !isOut && auctionStatus === "Live" && (
+          {!isLeading && !isOut && (
             <span className="text-xs bg-slate-950/30 px-2.5 py-1 rounded-lg font-mono font-bold">
               +{formatPKR(nextMinIncrement || currentPlayer?.basePrice || 0)}
             </span>

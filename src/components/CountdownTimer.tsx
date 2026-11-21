@@ -71,8 +71,12 @@ export const CountdownTimer: React.FC = () => {
                   ? isUrgent
                     ? "⚠️ Gavel Hammer Final Call!"
                     : "Bidding Open"
-                  : "Finalizing Bids..."
-                : auctionStatus}
+                  : timer === 0
+                  ? "Finalizing Bids..."
+                  : "Bidding Active"
+                : auctionStatus === "Paused"
+                ? "Auction Paused"
+                : "Auction Ready"}
             </span>
           </div>
         </div>

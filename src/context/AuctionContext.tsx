@@ -30,6 +30,7 @@ interface AuctionContextType {
   loginAsAdmin: (password: string) => { success: boolean; message: string };
   loginAsTeamOwner: (passkey: string, roomCode?: string) => { success: boolean; message: string };
   logoutToSpectator: () => void;
+  switchRoleDirectly: (newRole: UserRole, franchiseId?: string) => void;
 
   // Presets & Auction State
   rulePreset: RulePreset;
@@ -43,6 +44,7 @@ interface AuctionContextType {
   highestBid: Bid | null;
   franchiseStatuses: Record<string, 'active' | 'skipped' | 'out'>;
   timer: number;
+  timerExpiresAt: number | null;
   isTimerRunning: boolean;
   settings: AuctionSettings;
   watchlists: WatchlistItem[];
@@ -140,6 +142,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [currentBids, setCurrentBids] = useState<Bid[]>([]);
   const [franchiseStatuses, setFranchiseStatuses] = useState<Record<string, 'active' | 'skipped' | 'out'>>({});
   const [timer, setTimer] = useState<number>(DEFAULT_SETTINGS.defaultTimerSeconds);
+  const [timerExpiresAt, setTimerExpiresAt] = useState<number | null>(null);
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
   const [settings, setSettings] = useState<AuctionSettings>(DEFAULT_SETTINGS);
   const [watchlists, setWatchlists] = useState<WatchlistItem[]>([]);
@@ -149,6 +152,8 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isHydratedRef = useRef<boolean>(false);
+  const lastFinalizedIdxRef = useRef<number | null>(null);
 
   // Broadcast function to all tabs
   const broadcastSync = useCallback((data: Record<string, unknown>) => {
@@ -164,7 +169,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Save shared state to LocalStorage
   const persistState = useCallback(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && isHydratedRef.current) {
       const stateToSave = {
         franchises,
         players,
@@ -179,6 +184,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         eventLogs,
         rtmState,
         timer,
+        timerExpiresAt,
         isTimerRunning,
       };
       try {
@@ -199,6 +205,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     eventLogs,
     rtmState,
     timer,
+    timerExpiresAt,
     isTimerRunning,
   ]);
 
@@ -238,10 +245,14 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (parsed.tradeOffers) setTradeOffers(parsed.tradeOffers);
           if (parsed.eventLogs) setEventLogs(parsed.eventLogs);
           if (typeof parsed.timer === "number") setTimer(parsed.timer);
+          if (typeof parsed.timerExpiresAt === "number" || parsed.timerExpiresAt === null) {
+            setTimerExpiresAt(parsed.timerExpiresAt);
+          }
           if (typeof parsed.isTimerRunning === "boolean") setIsTimerRunning(parsed.isTimerRunning);
           if (parsed.rtmState !== undefined) setRtmState(parsed.rtmState);
         } catch {}
       }
+      isHydratedRef.current = true;
 
       // 3. Check URL query parameters for instant franchise link join or spectator mode
       try {
@@ -309,6 +320,9 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
             if (syncData.currentBids) setCurrentBids(syncData.currentBids);
             if (syncData.franchiseStatuses) setFranchiseStatuses(syncData.franchiseStatuses);
             if (typeof syncData.timer === "number") setTimer(syncData.timer);
+            if (typeof syncData.timerExpiresAt === "number" || syncData.timerExpiresAt === null) {
+              setTimerExpiresAt(syncData.timerExpiresAt);
+            }
             if (typeof syncData.isTimerRunning === "boolean") setIsTimerRunning(syncData.isTimerRunning);
             if (syncData.settings) setSettings(syncData.settings);
             if (syncData.rulePreset) setRulePresetState(syncData.rulePreset);
@@ -344,6 +358,9 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
             if (parsed.currentBids) setCurrentBids(parsed.currentBids);
             if (parsed.franchiseStatuses) setFranchiseStatuses(parsed.franchiseStatuses);
             if (typeof parsed.timer === "number") setTimer(parsed.timer);
+            if (typeof parsed.timerExpiresAt === "number" || parsed.timerExpiresAt === null) {
+              setTimerExpiresAt(parsed.timerExpiresAt);
+            }
             if (typeof parsed.isTimerRunning === "boolean") setIsTimerRunning(parsed.isTimerRunning);
             if (parsed.settings) setSettings(parsed.settings);
             if (parsed.rulePreset) setRulePresetState(parsed.rulePreset);
@@ -452,6 +469,22 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  const switchRoleDirectly = (newRole: UserRole, franchiseId?: string) => {
+    setRole(newRole);
+    const targetFranchiseId = newRole === "team_owner" ? (franchiseId || "iu") : null;
+    setAuthenticatedFranchiseId(targetFranchiseId);
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem(
+          AUTH_SESSION_KEY,
+          JSON.stringify({ role: newRole, authenticatedFranchiseId: targetFranchiseId })
+        );
+      } catch {}
+    }
+    const team = franchises.find((f) => f.id === targetFranchiseId);
+    addLog("admin", `Session switched role to ${newRole}${team ? ` (${team.name})` : ""}`);
+  };
+
   // Rule Preset Selector
   const setRulePreset = (preset: RulePreset) => {
     setRulePresetState(preset);
@@ -496,8 +529,8 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const goToNextPlayer = useCallback(() => {
     setCurrentBids([]);
     setFranchiseStatuses({});
-    setTimer(settings.defaultTimerSeconds);
-    setIsTimerRunning(false);
+    const duration = settings.defaultTimerSeconds || 30;
+    setTimer(duration);
     setRtmState(null);
 
     let nextIdx = currentPlayerIndex + 1;
@@ -508,8 +541,11 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (nextIdx < players.length) {
       setCurrentPlayerIndex(nextIdx);
       const isLive = auctionStatus === "Live";
+      const expiresAt = isLive ? Date.now() + duration * 1000 : null;
+      setIsTimerRunning(isLive);
+      setTimerExpiresAt(expiresAt);
+      lastFinalizedIdxRef.current = null;
       if (isLive) {
-        setIsTimerRunning(true);
         soundEngine.speakAnnouncement(
           `Next player: ${players[nextIdx].name}, category ${players[nextIdx].category}, base price ${(players[nextIdx].basePrice / 10000000).toFixed(2)} Crore.`
         );
@@ -518,17 +554,21 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         currentPlayerIndex: nextIdx,
         currentBids: [],
         franchiseStatuses: {},
-        timer: settings.defaultTimerSeconds,
+        timer: duration,
+        timerExpiresAt: expiresAt,
         isTimerRunning: isLive,
         rtmState: null,
       });
     } else {
       setAuctionStatus("Completed");
+      setIsTimerRunning(false);
+      setTimerExpiresAt(null);
       soundEngine.speakAnnouncement("The PSL Mock Auction has successfully concluded!");
       addLog("admin", "Auction completed. All players processed.");
       broadcastSync({
         auctionStatus: "Completed",
         isTimerRunning: false,
+        timerExpiresAt: null,
         rtmState: null,
       });
     }
@@ -597,11 +637,14 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       );
 
       setRtmState(null);
+      setIsTimerRunning(false);
+      setTimerExpiresAt(null);
       broadcastSync({
         franchises: updatedFranchises,
         players: updatedPlayers,
         rtmState: null,
         isTimerRunning: false,
+        timerExpiresAt: null,
       });
 
       setTimeout(() => {
@@ -621,6 +664,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const isSold = forceSold !== undefined ? forceSold : !!finalBid;
 
       setIsTimerRunning(false);
+      setTimerExpiresAt(null);
 
       if (isSold && finalBid) {
         // Check RTM (Right to Match) criteria
@@ -661,7 +705,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 amount: finalBid.amount,
               }
             );
-            broadcastSync({ rtmState: newRtm, isTimerRunning: false });
+            broadcastSync({ rtmState: newRtm, isTimerRunning: false, timerExpiresAt: null });
             return;
           }
         }
@@ -685,7 +729,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
           playerName: current.name,
         });
 
-        broadcastSync({ players: updatedPlayers, isTimerRunning: false });
+        broadcastSync({ players: updatedPlayers, isTimerRunning: false, timerExpiresAt: null });
 
         setTimeout(() => {
           goToNextPlayer();
@@ -812,18 +856,24 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const goToPreviousPlayer = () => {
     if (currentPlayerIndex > 0) {
       const prevIdx = currentPlayerIndex - 1;
+      const duration = settings.defaultTimerSeconds || 30;
+      const isLive = auctionStatus === "Live";
+      const expiresAt = isLive ? Date.now() + duration * 1000 : null;
       setCurrentBids([]);
       setFranchiseStatuses({});
-      setTimer(settings.defaultTimerSeconds);
-      setIsTimerRunning(false);
+      setTimer(duration);
+      setTimerExpiresAt(expiresAt);
+      setIsTimerRunning(isLive);
       setCurrentPlayerIndex(prevIdx);
       setRtmState(null);
+      lastFinalizedIdxRef.current = null;
       broadcastSync({
         currentPlayerIndex: prevIdx,
         currentBids: [],
         franchiseStatuses: {},
-        timer: settings.defaultTimerSeconds,
-        isTimerRunning: false,
+        timer: duration,
+        timerExpiresAt: expiresAt,
+        isTimerRunning: isLive,
         rtmState: null,
       });
     }
@@ -832,61 +882,57 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const selectPlayerForAuction = (playerId: string) => {
     const idx = players.findIndex((p) => p.id === playerId);
     if (idx !== -1) {
+      const duration = settings.defaultTimerSeconds || 30;
+      const isLive = auctionStatus === "Live";
+      const expiresAt = isLive ? Date.now() + duration * 1000 : null;
       setCurrentBids([]);
       setFranchiseStatuses({});
-      setTimer(settings.defaultTimerSeconds);
-      setIsTimerRunning(false);
+      setTimer(duration);
+      setTimerExpiresAt(expiresAt);
+      setIsTimerRunning(isLive);
       setCurrentPlayerIndex(idx);
       setRtmState(null);
+      lastFinalizedIdxRef.current = null;
       broadcastSync({
         currentPlayerIndex: idx,
         currentBids: [],
         franchiseStatuses: {},
-        timer: settings.defaultTimerSeconds,
-        isTimerRunning: false,
+        timer: duration,
+        timerExpiresAt: expiresAt,
+        isTimerRunning: isLive,
         rtmState: null,
       });
     }
   };
 
-  // Timer Tick Interval
+  // Master Synchronized Timer Tick (Wall-Clock Epoch Based)
   useEffect(() => {
-    if (isTimerRunning && auctionStatus === "Live") {
-      timerIntervalRef.current = setInterval(() => {
-        setTimer((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerIntervalRef.current!);
+    if (auctionStatus === "Live" && isTimerRunning) {
+      const interval = setInterval(() => {
+        if (!timerExpiresAt) return;
+        const now = Date.now();
+        const remaining = Math.max(0, Math.ceil((timerExpiresAt - now) / 1000));
+        setTimer(remaining);
+
+        if (remaining <= 5 && remaining > 0) {
+          soundEngine.playTickSound(true);
+        } else if (remaining % 5 === 0 && remaining > 0) {
+          soundEngine.playTickSound(false);
+        }
+
+        if (remaining <= 0) {
+          if (lastFinalizedIdxRef.current !== currentPlayerIndex) {
+            lastFinalizedIdxRef.current = currentPlayerIndex;
+            setIsTimerRunning(false);
+            setTimerExpiresAt(null);
             finalizePlayer();
-            return 0;
           }
-          if (prev <= 5) {
-            soundEngine.playTickSound(true);
-          } else if (prev % 5 === 0) {
-            soundEngine.playTickSound(false);
-          }
+        }
+      }, 250);
 
-          // Broadcast timer to other tabs periodically (every second when running)
-          if (role === "admin") {
-            broadcastSync({
-              timer: prev - 1,
-              isTimerRunning: true,
-              currentPlayerIndex,
-            });
-          }
-
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-      }
+      return () => clearInterval(interval);
     }
-
-    return () => {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    };
-  }, [isTimerRunning, auctionStatus, finalizePlayer, role, broadcastSync, currentPlayerIndex]);
+  }, [auctionStatus, isTimerRunning, timerExpiresAt, currentPlayerIndex, finalizePlayer]);
 
   // Real-time automatic skip/out rule check
   useEffect(() => {
@@ -986,11 +1032,16 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     // Reset or extend timer
-    const newTimerVal = timer <= settings.extensionTriggerSeconds
-      ? timer + settings.extensionSeconds
+    const currentRemaining = timerExpiresAt ? Math.max(0, Math.ceil((timerExpiresAt - Date.now()) / 1000)) : timer;
+    const newTimerVal = currentRemaining <= settings.extensionTriggerSeconds
+      ? currentRemaining + settings.extensionSeconds
       : settings.timerResetSeconds;
+    const newExpiresAt = Date.now() + newTimerVal * 1000;
 
     setTimer(newTimerVal);
+    setTimerExpiresAt(newExpiresAt);
+    setIsTimerRunning(true);
+    lastFinalizedIdxRef.current = null;
 
     let updatedStatuses = franchiseStatuses;
     if (franchiseStatuses[biddingFranchiseId] === "skipped") {
@@ -1013,6 +1064,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       currentBids: updatedBids,
       franchiseStatuses: updatedStatuses,
       timer: newTimerVal,
+      timerExpiresAt: newExpiresAt,
       isTimerRunning: true,
       currentPlayerIndex,
     });
@@ -1084,14 +1136,18 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const firstUpcoming = updatedPlayers.findIndex((p) => p.status === "upcoming");
     const newIdx = firstUpcoming !== -1 ? firstUpcoming : 0;
+    const duration = settings.defaultTimerSeconds || 30;
+    const expiresAt = Date.now() + duration * 1000;
 
     setPlayers(updatedPlayers);
     setCurrentPlayerIndex(newIdx);
     setCurrentBids([]);
     setFranchiseStatuses({});
-    setTimer(settings.defaultTimerSeconds);
+    setTimer(duration);
+    setTimerExpiresAt(expiresAt);
     setAuctionStatus("Live");
     setIsTimerRunning(true);
+    lastFinalizedIdxRef.current = null;
 
     const count = selectedPlayerIds && selectedPlayerIds.length > 0 ? selectedPlayerIds.length : "all";
     addLog("round2", `Accelerated Auction Round started for ${count} unsold players with ${discountPercent}% price adjustment.`);
@@ -1102,7 +1158,8 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       currentPlayerIndex: newIdx,
       currentBids: [],
       franchiseStatuses: {},
-      timer: settings.defaultTimerSeconds,
+      timer: duration,
+      timerExpiresAt: expiresAt,
       auctionStatus: "Live",
       isTimerRunning: true,
       rtmState: null,
@@ -1121,9 +1178,13 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       currentPool = players.map((p) => (p.status === "upcoming" ? upcoming[uIdx++] : p));
       setPlayers(currentPool);
     }
+    const duration = settings.defaultTimerSeconds || 30;
+    const expiresAt = Date.now() + duration * 1000;
     setAuctionStatus("Live");
     setIsTimerRunning(true);
-    setTimer(settings.defaultTimerSeconds);
+    setTimer(duration);
+    setTimerExpiresAt(expiresAt);
+    lastFinalizedIdxRef.current = null;
     addLog("start", "Live Player Auction started!");
     soundEngine.speakAnnouncement("The PSL Mock Auction is now live! Bidding has commenced.");
 
@@ -1131,7 +1192,8 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       players: currentPool,
       auctionStatus: "Live",
       isTimerRunning: true,
-      timer: settings.defaultTimerSeconds,
+      timer: duration,
+      timerExpiresAt: expiresAt,
       currentPlayerIndex,
       currentBids: [],
       franchiseStatuses: {},
@@ -1142,22 +1204,30 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const pauseAuction = () => {
     setAuctionStatus("Paused");
     setIsTimerRunning(false);
+    setTimerExpiresAt(null);
     addLog("pause", "Auction paused by administrator.");
     broadcastSync({
       auctionStatus: "Paused",
       isTimerRunning: false,
+      timerExpiresAt: null,
       timer,
     });
   };
 
   const resumeAuction = () => {
+    const duration = timer > 0 ? timer : settings.defaultTimerSeconds || 30;
+    const expiresAt = Date.now() + duration * 1000;
     setAuctionStatus("Live");
     setIsTimerRunning(true);
-    addLog("resume", "Auction resumed by administrator.");
+    setTimer(duration);
+    setTimerExpiresAt(expiresAt);
+    lastFinalizedIdxRef.current = null;
+    addLog("resume", "Auction resumed.");
     broadcastSync({
       auctionStatus: "Live",
       isTimerRunning: true,
-      timer,
+      timerExpiresAt: expiresAt,
+      timer: duration,
     });
   };
 
@@ -1180,14 +1250,18 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const firstUnsoldIdx = updatedPlayers.findIndex((p) => p.status === "upcoming");
     const targetIdx = firstUnsoldIdx !== -1 ? firstUnsoldIdx : 0;
+    const duration = settings.defaultTimerSeconds || 30;
+    const expiresAt = Date.now() + duration * 1000;
 
     setPlayers(updatedPlayers);
     setCurrentPlayerIndex(targetIdx);
     setCurrentBids([]);
     setFranchiseStatuses({});
-    setTimer(settings.defaultTimerSeconds);
+    setTimer(duration);
+    setTimerExpiresAt(expiresAt);
     setAuctionStatus("Live");
     setIsTimerRunning(true);
+    lastFinalizedIdxRef.current = null;
 
     addLog("round2", "Second Auction Round initiated for Unsold Players!");
     soundEngine.speakAnnouncement("Second auction round has commenced for unsold players!");
@@ -1197,7 +1271,8 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       currentPlayerIndex: targetIdx,
       currentBids: [],
       franchiseStatuses: {},
-      timer: settings.defaultTimerSeconds,
+      timer: duration,
+      timerExpiresAt: expiresAt,
       auctionStatus: "Live",
       isTimerRunning: true,
       rtmState: null,
@@ -1211,12 +1286,14 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setCurrentBids([]);
     setFranchiseStatuses({});
     setTimer(DEFAULT_SETTINGS.defaultTimerSeconds);
+    setTimerExpiresAt(null);
     setIsTimerRunning(false);
     setAuctionStatus("Ready");
     setEventLogs([]);
     setTradeOffers([]);
     setWatchlists([]);
     setRtmState(null);
+    lastFinalizedIdxRef.current = null;
     if (typeof window !== "undefined") {
       try {
         localStorage.removeItem(STORAGE_KEY);
@@ -1229,6 +1306,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       currentBids: [],
       franchiseStatuses: {},
       timer: DEFAULT_SETTINGS.defaultTimerSeconds,
+      timerExpiresAt: null,
       isTimerRunning: false,
       auctionStatus: "Ready",
       eventLogs: [],
@@ -1599,6 +1677,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         loginAsAdmin,
         loginAsTeamOwner,
         logoutToSpectator,
+        switchRoleDirectly,
         rulePreset,
         setRulePreset,
         auctionStatus,
@@ -1610,6 +1689,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         highestBid,
         franchiseStatuses,
         timer,
+        timerExpiresAt,
         isTimerRunning,
         settings,
         watchlists,

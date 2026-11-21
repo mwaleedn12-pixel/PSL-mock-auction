@@ -30,11 +30,14 @@ import {
   Check,
   Shuffle,
   Users,
+  RotateCcw,
 } from "lucide-react";
 
 export default function LiveAuctionArenaPage() {
   const {
     role,
+    authenticatedFranchiseId,
+    switchRoleDirectly,
     auctionStatus,
     players,
     currentPlayer,
@@ -53,6 +56,7 @@ export default function LiveAuctionArenaPage() {
     startRoundTwo,
     reEnterUnsoldPlayers,
     shuffleUpcomingPlayers,
+    resetAuction,
     toggleWatchlist,
     watchlists,
     activeFranchise,
@@ -195,6 +199,171 @@ export default function LiveAuctionArenaPage() {
               <RefreshCw className="w-3.5 h-3.5" /> Re-Auction Unsold ({unsoldPlayers.length})
             </button>
           )}
+        </div>
+      </div>
+
+      {/* Universal Live Auction Controller & Room Status Bar */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-900/95 to-slate-950 border-2 border-emerald-500/40 rounded-3xl p-4 sm:p-5 shadow-2xl space-y-3">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className={`p-2.5 rounded-2xl border ${
+              auctionStatus === "Live"
+                ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400 animate-pulse"
+                : auctionStatus === "Paused"
+                ? "bg-amber-500/20 border-amber-500/50 text-amber-400"
+                : "bg-slate-800 border-slate-700 text-slate-300"
+            }`}>
+              <Gavel className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-400">
+                  AUCTION STATUS:
+                </span>
+                <span className={`text-xs font-black px-2.5 py-0.5 rounded-full border ${
+                  auctionStatus === "Live"
+                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/50 animate-pulse"
+                    : auctionStatus === "Paused"
+                    ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
+                    : "bg-slate-800 text-slate-300 border-slate-700"
+                }`}>
+                  ● {auctionStatus.toUpperCase()}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                {auctionStatus === "Live"
+                  ? "Live auction in progress! All bids and countdown tick in real-time synchronization across tabs."
+                  : auctionStatus === "Paused"
+                  ? "Auction is currently paused. Click 'Resume Live Auction' to continue."
+                  : "Auction is ready. Click 'Start Live Auction' to start bidding!"}
+              </p>
+            </div>
+          </div>
+
+          {/* Action Control Buttons */}
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            {auctionStatus !== "Live" ? (
+              <button
+                onClick={auctionStatus === "Paused" ? resumeAuction : startAuction}
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-emerald-500/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <Play className="w-4 h-4 fill-current" />
+                <span>{auctionStatus === "Paused" ? "Resume Live Auction" : "Start Live Auction"}</span>
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={pauseAuction}
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black bg-amber-500/20 text-amber-300 border border-amber-500/50 hover:bg-amber-500/30 transition-all"
+                  title="Pause live auction timer and bidding"
+                >
+                  <Pause className="w-4 h-4" /> Pause
+                </button>
+                <button
+                  onClick={() => finalizePlayer(true)}
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 hover:bg-emerald-500/30 transition-all"
+                  title="Sell player to leading bidder immediately"
+                >
+                  <CheckCircle className="w-4 h-4 text-emerald-400" /> Hammer Down (Sell)
+                </button>
+                <button
+                  onClick={() => finalizePlayer(false)}
+                  className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black bg-red-500/20 text-red-300 border border-red-500/50 hover:bg-red-500/30 transition-all"
+                  title="Mark current player unsold and advance"
+                >
+                  <XCircle className="w-4 h-4 text-red-400" /> Unsold
+                </button>
+                <button
+                  onClick={goToNextPlayer}
+                  className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700 transition-all"
+                  title="Skip to next player"
+                >
+                  <SkipForward className="w-4 h-4" /> Next
+                </button>
+                <button
+                  onClick={goToPreviousPlayer}
+                  className="flex items-center gap-1 px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition-all"
+                  title="Return to previous player"
+                >
+                  <SkipBack className="w-4 h-4" />
+                </button>
+              </>
+            )}
+
+            <button
+              onClick={resetAuction}
+              className="flex items-center gap-1 px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-950 text-slate-400 hover:text-red-400 border border-slate-800 hover:border-red-900/50 transition-colors"
+              title="Reset entire auction back to initial state"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Reset
+            </button>
+          </div>
+        </div>
+
+        {/* Quick Role Switcher Bar */}
+        <div className="pt-2 border-t border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400 text-[11px] font-bold">Acting In This Tab As:</span>
+            <span className={`px-2.5 py-0.5 rounded-full font-black text-[11px] border ${
+              role === "admin"
+                ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                : role === "team_owner"
+                ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                : "bg-slate-800 text-slate-300 border-slate-700"
+            }`}>
+              {role === "admin"
+                ? "👑 Super Admin"
+                : role === "team_owner"
+                ? `🏏 ${activeFranchise?.name || "Team Owner"}`
+                : "👁️ Public Spectator"}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1">
+            <span className="text-[10px] text-slate-500 mr-1">Switch Tab Role:</span>
+            <button
+              onClick={() => switchRoleDirectly("admin")}
+              className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors ${
+                role === "admin"
+                  ? "bg-amber-500 text-slate-950 border-amber-400 font-black"
+                  : "bg-slate-900 text-amber-400 border-slate-800 hover:bg-slate-800"
+              }`}
+            >
+              👑 Admin
+            </button>
+            {franchises.map((f) => {
+              const isCurrent = role === "team_owner" && authenticatedFranchiseId === f.id;
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => switchRoleDirectly("team_owner", f.id)}
+                  style={{
+                    borderColor: isCurrent ? f.primaryColor : undefined,
+                    backgroundColor: isCurrent ? `${f.primaryColor}33` : undefined,
+                    color: isCurrent ? "#ffffff" : undefined,
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors ${
+                    isCurrent
+                      ? "font-black"
+                      : "bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800"
+                  }`}
+                  title={`Switch active tab to ${f.name} Owner`}
+                >
+                  {f.shortName}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => switchRoleDirectly("spectator")}
+              className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors ${
+                role === "spectator"
+                  ? "bg-slate-200 text-slate-950 border-white font-black"
+                  : "bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800"
+              }`}
+            >
+              Viewer
+            </button>
+          </div>
         </div>
       </div>
 
