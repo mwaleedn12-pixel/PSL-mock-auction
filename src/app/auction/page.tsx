@@ -32,6 +32,7 @@ import {
   Users,
   RotateCcw,
   Bot,
+  ChevronDown,
 } from "lucide-react";
 
 export default function LiveAuctionArenaPage() {
@@ -96,362 +97,209 @@ export default function LiveAuctionArenaPage() {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
+    <div className="space-y-4 animate-fadeIn pb-16">
       {/* Right to Match (RTM) Modal Overlay */}
       <RtmModal />
 
-      {/* Live Broadcast Ticker Bar */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950/70 via-slate-900 to-amber-950/70 border border-emerald-500/30 p-2.5 px-4 shadow-xl flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
-          <span className="font-black text-white uppercase tracking-wider text-[11px]">LIVE BROADCAST FEED:</span>
-        </div>
-        <div className="text-slate-300 font-medium truncate max-w-xl text-[11px]">
-          {highestBid ? (
-            <span>
-              🔥 Leading Bid: <strong className="text-amber-400 font-mono font-bold">{formatPKR(highestBid.amount)}</strong> by <strong className="text-emerald-400 font-bold">{highestBid.franchiseName}</strong> on <strong className="text-white">{currentPlayer?.name}</strong>
-            </span>
-          ) : currentPlayer ? (
-            <span>
-              Now on Block: <strong className="text-emerald-300">{currentPlayer.name}</strong> • Base: <strong className="text-amber-400 font-mono">{formatPKR(currentPlayer.basePrice)}</strong> ({currentPlayer.category})
-            </span>
-          ) : (
-            <span>Welcome to the PSL 12 Live Virtual Player Auction Room!</span>
-          )}
-        </div>
-        <div className="hidden sm:flex items-center gap-2 text-slate-400 text-[10px] font-mono">
-          <span>8 FRANCHISES</span>
-          <span>•</span>
-          <span>RTM ENABLED</span>
-        </div>
-      </div>
-
-      {/* Top Arena Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-red-500 animate-ping" />
-            <span className="text-xs font-black uppercase tracking-wider text-red-400">
-              Live Broadcast Arena
-            </span>
-            <span className="text-xs text-slate-500">•</span>
-            <span className="text-xs text-slate-400">
-              Player {currentPlayerIndex + 1} of {players.length}
-            </span>
-            <span className="text-xs text-slate-500">•</span>
-            <span className="text-xs text-amber-400 font-semibold">
-              Order: {settings.playerOccurrenceOrder === "random" ? "Random Pot Draw" : "Sequential Order"}
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-0.5">
-            PSL 12 Live Player Auction
-          </h1>
-        </div>
-
-        {/* Shareable Invite Links & Quick Actions */}
-        <div className="flex flex-wrap items-center gap-2">
-          {activeFranchise && (
-            <button
-              onClick={() => handleCopyLink("team")}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-900 border border-slate-700 text-slate-200 hover:text-white transition-colors"
-              title="Copy private invite link for this franchise"
-            >
-              {copiedLink === "team" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
-              <span>{copiedLink === "team" ? "Link Copied!" : "My Team Link"}</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => handleCopyLink("spectator")}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-900 border border-slate-700 text-slate-200 hover:text-white transition-colors"
-            title="Copy public read-only spectator stream link"
-          >
-            {copiedLink === "spectator" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
-            <span>{copiedLink === "spectator" ? "Spectator Link Copied!" : "Spectator Link"}</span>
-          </button>
-
-          {activeFranchise && currentPlayer && (
-            <button
-              onClick={() => toggleWatchlist(activeFranchise.id, currentPlayer.id)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${
-                isCurrentWatchlisted
-                  ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
-                  : "bg-slate-900 text-slate-400 border-slate-800 hover:text-white"
-              }`}
-            >
-              <Bookmark className={`w-3.5 h-3.5 ${isCurrentWatchlisted ? "fill-amber-400" : ""}`} />
-              <span>{isCurrentWatchlisted ? "Watchlisted" : "Add to Wishlist"}</span>
-            </button>
-          )}
-
-          {role === "admin" && (
-            <button
-              onClick={shuffleUpcomingPlayers}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors"
-              title="Shuffle upcoming players randomly for a live draw"
-            >
-              <Shuffle className="w-3.5 h-3.5 text-amber-400" /> Shuffle Order
-            </button>
-          )}
-
-          {unsoldPlayers.length > 0 && auctionStatus !== "Live" && (
-            <button
-              onClick={() => reEnterUnsoldPlayers([], 0)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors"
-            >
-              <RefreshCw className="w-3.5 h-3.5" /> Re-Auction Unsold ({unsoldPlayers.length})
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Universal Live Auction Controller & Room Status Bar */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-900/95 to-slate-950 border-2 border-emerald-500/40 rounded-3xl p-4 sm:p-5 shadow-2xl space-y-3">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+      {/* ======================================================== */}
+      {/* 1. TOP HEADER: ROLE-AWARE & COMPACT (<55px height)       */}
+      {/* ======================================================== */}
+      {role === "team_owner" && activeFranchise ? (
+        /* --- FRANCHISE OWNER COCKPIT BAR (e.g. Islamabad United) --- */
+        <div className="bg-slate-900/95 border border-slate-800 rounded-2xl p-2.5 sm:p-3 px-4 shadow-xl flex flex-wrap items-center justify-between gap-3">
+          {/* Left: Active Franchise & Live Purse Financials */}
           <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-2xl border ${
-              auctionStatus === "Live"
-                ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400 animate-pulse"
-                : auctionStatus === "Paused"
-                ? "bg-amber-500/20 border-amber-500/50 text-amber-400"
-                : "bg-slate-800 border-slate-700 text-slate-300"
-            }`}>
-              <Gavel className="w-5 h-5" />
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm text-white shadow-md border border-white/20 shrink-0"
+              style={{ backgroundColor: activeFranchise.primaryColor }}
+            >
+              {activeFranchise.shortName}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-400">
-                  AUCTION STATUS:
-                </span>
-                <span className={`text-xs font-black px-2.5 py-0.5 rounded-full border ${
+                <h2 className="text-sm font-black text-white">{activeFranchise.name}</h2>
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
                   auctionStatus === "Live"
                     ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/50 animate-pulse"
-                    : auctionStatus === "Paused"
-                    ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
-                    : "bg-slate-800 text-slate-300 border-slate-700"
+                    : "bg-amber-500/20 text-amber-300 border-amber-500/50"
                 }`}>
                   ● {auctionStatus.toUpperCase()}
                 </span>
+                <span className="text-[11px] text-slate-500 hidden sm:inline">
+                  • Lot #{currentPlayerIndex + 1}/{players.length}
+                </span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                {auctionStatus === "Live"
-                  ? botBiddingEnabled
-                    ? "🤖 Bot Testing Mode Active: Other 7 franchises bid automatically. Islamabad United is manual for you to test!"
-                    : "Live auction in progress! All bids and countdown tick in real-time synchronization across tabs."
-                  : auctionStatus === "Paused"
-                  ? "Auction is currently paused. Click 'Resume Live Auction' to continue."
-                  : "Auction is ready. Click 'Start Live Auction' to start bidding!"}
-              </p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-400 mt-0.5">
+                <span>Remaining: <strong className="text-emerald-400 font-mono font-bold">{formatPKR(activeFranchise.remainingPurse)}</strong></span>
+                <span>Spent: <strong className="text-slate-300 font-mono">{formatPKR(activeFranchise.initialPurse - activeFranchise.remainingPurse)}</strong></span>
+                <span>Squad: <strong className="text-slate-200">{players.filter((p) => p.soldToFranchiseId === activeFranchise.id).length}/{activeFranchise.maxSquadSize}</strong></span>
+                <span>Overseas: <strong className="text-cyan-400">{players.filter((p) => p.soldToFranchiseId === activeFranchise.id && p.isOverseas).length}/{activeFranchise.maxOverseas}</strong></span>
+              </div>
             </div>
           </div>
 
-          {/* Action Control Buttons */}
-          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-            {/* Bot Simulation Toggle */}
+          {/* Right: Quick Simulation & Testing Tools */}
+          <div className="flex items-center gap-2">
+            {/* Quick Bot Toggle */}
             <button
               onClick={toggleBotBidding}
-              className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold border transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
                 botBiddingEnabled
                   ? "bg-purple-950/70 border-purple-500/60 text-purple-300 shadow-md shadow-purple-500/20"
-                  : "bg-slate-900 border-slate-700 text-slate-400 hover:text-white"
+                  : "bg-slate-950 border-slate-700 text-slate-400 hover:text-white"
               }`}
-              title="Toggle Automated AI Bidding for 7 teams (Islamabad United stays manual for you to test)"
+              title="Toggle Automated Bot Bidding for the other 7 rival franchises"
             >
-              <Bot className="w-4 h-4 text-purple-400" />
-              <span>
-                Bot Simulation: <strong className={botBiddingEnabled ? "text-purple-300" : "text-slate-400"}>{botBiddingEnabled ? "ON (7 Bots, IU Manual)" : "OFF"}</strong>
-              </span>
+              <Bot className="w-3.5 h-3.5 text-purple-400" />
+              <span className="hidden sm:inline">Bots:</span>
+              <strong className={botBiddingEnabled ? "text-purple-300" : "text-slate-400"}>
+                {botBiddingEnabled ? "ON (7 Rival Bots)" : "OFF"}
+              </strong>
+            </button>
+
+            {/* Start / Pause Quick Button */}
+            {auctionStatus !== "Live" ? (
+              <button
+                onClick={auctionStatus === "Paused" ? resumeAuction : startAuction}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-colors shadow"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>{auctionStatus === "Paused" ? "Resume" : "Start"}</span>
+              </button>
+            ) : (
+              <button
+                onClick={pauseAuction}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors"
+              >
+                <Pause className="w-3.5 h-3.5" />
+                <span>Pause</span>
+              </button>
+            )}
+
+            {/* Quick Wishlist button */}
+            {currentPlayer && (
+              <button
+                onClick={() => toggleWatchlist(activeFranchise.id, currentPlayer.id)}
+                className={`p-2 rounded-xl text-xs font-bold border transition-colors ${
+                  isCurrentWatchlisted
+                    ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
+                    : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"
+                }`}
+                title={isCurrentWatchlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+              >
+                <Bookmark className={`w-3.5 h-3.5 ${isCurrentWatchlisted ? "fill-amber-400" : ""}`} />
+              </button>
+            )}
+
+            <a
+              href="#more-controls"
+              className="px-2.5 py-1.5 rounded-xl bg-slate-950 text-slate-400 hover:text-white border border-slate-800 text-[11px] font-medium hidden md:flex items-center gap-1 transition-colors"
+              title="Jump to broadcast feed, all franchise purses, and room controls"
+            >
+              <span>More Tools</span>
+              <ChevronDown className="w-3 h-3" />
+            </a>
+          </div>
+        </div>
+      ) : role === "admin" ? (
+        /* --- ADMIN TOP CONTROLLER BAR --- */
+        <div className="bg-slate-900/95 border-2 border-amber-500/40 rounded-2xl p-2.5 sm:p-3 px-4 shadow-xl flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="p-1 px-2.5 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 font-black text-xs">👑 Super Admin</span>
+            <span className={`text-xs font-black px-2.5 py-0.5 rounded-full border ${
+              auctionStatus === "Live"
+                ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/50 animate-pulse"
+                : "bg-amber-500/20 text-amber-300 border-amber-500/50"
+            }`}>
+              ● {auctionStatus.toUpperCase()}
+            </span>
+            <span className="text-xs text-slate-400 hidden sm:inline">
+              Player {currentPlayerIndex + 1} of {players.length}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={toggleBotBidding}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                botBiddingEnabled
+                  ? "bg-purple-950/70 border-purple-500/60 text-purple-300"
+                  : "bg-slate-950 border-slate-700 text-slate-400 hover:text-white"
+              }`}
+            >
+              <Bot className="w-3.5 h-3.5 text-purple-400" />
+              <span>Bots: <strong>{botBiddingEnabled ? "ON" : "OFF"}</strong></span>
             </button>
 
             {auctionStatus !== "Live" ? (
               <button
                 onClick={auctionStatus === "Paused" ? resumeAuction : startAuction}
-                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-emerald-500/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-colors shadow"
               >
-                <Play className="w-4 h-4 fill-current" />
-                <span>{auctionStatus === "Paused" ? "Resume Live Auction" : "Start Live Auction"}</span>
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>{auctionStatus === "Paused" ? "Resume" : "Start Live"}</span>
               </button>
             ) : (
               <>
                 <button
                   onClick={pauseAuction}
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black bg-amber-500/20 text-amber-300 border border-amber-500/50 hover:bg-amber-500/30 transition-all"
-                  title="Pause live auction timer and bidding"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors"
                 >
-                  <Pause className="w-4 h-4" /> Pause
+                  <Pause className="w-3.5 h-3.5" /> Pause
                 </button>
                 <button
                   onClick={() => finalizePlayer(true)}
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 hover:bg-emerald-500/30 transition-all"
-                  title="Sell player to leading bidder immediately"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 hover:bg-emerald-500/30 transition-all"
+                  title="Sell player to leading bidder"
                 >
-                  <CheckCircle className="w-4 h-4 text-emerald-400" /> Hammer Down (Sell)
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> Hammer Down (Sell)
                 </button>
                 <button
                   onClick={() => finalizePlayer(false)}
-                  className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black bg-red-500/20 text-red-300 border border-red-500/50 hover:bg-red-500/30 transition-all"
-                  title="Mark current player unsold and advance"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-black bg-red-500/20 text-red-300 border border-red-500/50 hover:bg-red-500/30 transition-all"
+                  title="Mark unsold"
                 >
-                  <XCircle className="w-4 h-4 text-red-400" /> Unsold
+                  <XCircle className="w-3.5 h-3.5 text-red-400" /> Unsold
                 </button>
                 <button
                   onClick={goToNextPlayer}
-                  className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700 transition-all"
-                  title="Skip to next player"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700 transition-all"
                 >
-                  <SkipForward className="w-4 h-4" /> Next
-                </button>
-                <button
-                  onClick={goToPreviousPlayer}
-                  className="flex items-center gap-1 px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition-all"
-                  title="Return to previous player"
-                >
-                  <SkipBack className="w-4 h-4" />
+                  <SkipForward className="w-3.5 h-3.5" /> Next
                 </button>
               </>
             )}
-
-            <button
-              onClick={resetAuction}
-              className="flex items-center gap-1 px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-950 text-slate-400 hover:text-red-400 border border-slate-800 hover:border-red-900/50 transition-colors"
-              title="Reset entire auction back to initial state"
-            >
-              <RotateCcw className="w-3.5 h-3.5" /> Reset
-            </button>
           </div>
         </div>
-
-        {/* Quick Role Switcher Bar */}
-        <div className="pt-2 border-t border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+      ) : (
+        /* --- SPECTATOR COMPACT BAR --- */
+        <div className="bg-slate-900/95 border border-slate-800 rounded-2xl p-2.5 sm:p-3 px-4 shadow-xl flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
-            <span className="text-slate-400 text-[11px] font-bold">Acting In This Tab As:</span>
-            <span className={`px-2.5 py-0.5 rounded-full font-black text-[11px] border ${
-              role === "admin"
-                ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
-                : role === "team_owner"
-                ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                : "bg-slate-800 text-slate-300 border-slate-700"
-            }`}>
-              {role === "admin"
-                ? "👑 Super Admin"
-                : role === "team_owner"
-                ? `🏏 ${activeFranchise?.name || "Team Owner"}`
-                : "👁️ Public Spectator"}
-            </span>
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+            <span className="font-black text-white uppercase tracking-wider">LIVE SPECTATOR FEED</span>
+            <span className="text-slate-500">•</span>
+            <span className="text-slate-400">Player {currentPlayerIndex + 1} of {players.length}</span>
           </div>
-
-          <div className="flex flex-wrap items-center gap-1">
-            <span className="text-[10px] text-slate-500 mr-1">Switch Tab Role:</span>
-            <button
-              onClick={() => switchRoleDirectly("admin")}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors ${
-                role === "admin"
-                  ? "bg-amber-500 text-slate-950 border-amber-400 font-black"
-                  : "bg-slate-900 text-amber-400 border-slate-800 hover:bg-slate-800"
-              }`}
-            >
-              👑 Admin
-            </button>
-            {franchises.map((f) => {
-              const isCurrent = role === "team_owner" && authenticatedFranchiseId === f.id;
-              return (
-                <button
-                  key={f.id}
-                  onClick={() => switchRoleDirectly("team_owner", f.id)}
-                  style={{
-                    borderColor: isCurrent ? f.primaryColor : undefined,
-                    backgroundColor: isCurrent ? `${f.primaryColor}33` : undefined,
-                    color: isCurrent ? "#ffffff" : undefined,
-                  }}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors ${
-                    isCurrent
-                      ? "font-black"
-                      : "bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800"
-                  }`}
-                  title={`Switch active tab to ${f.name} Owner`}
-                >
-                  {f.shortName}
-                </button>
-              );
-            })}
-            <button
-              onClick={() => switchRoleDirectly("spectator")}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors ${
-                role === "spectator"
-                  ? "bg-slate-200 text-slate-950 border-white font-black"
-                  : "bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800"
-              }`}
-            >
-              Viewer
-            </button>
-          </div>
+          <button
+            onClick={() => switchRoleDirectly("team_owner", "iu")}
+            className="px-3 py-1 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase"
+          >
+            Bid as Islamabad United
+          </button>
         </div>
-      </div>
+      )}
 
-      {/* Main Grid: Player Showcase (Left) + Auction Engine & Bidding Controls (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Player Presentation Card */}
+      {/* ======================================================== */}
+      {/* 2. THE MAIN LIVE ACTION GRID (TOP PRIORITY - ABOVE FOLD) */}
+      {/* ======================================================== */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Left Column: Player Presentation Card (Name, Price, Category, Photo, Stats) */}
         <div className="lg:col-span-7 space-y-4">
           <PlayerCard
             player={currentPlayer}
             highestBidAmount={highestBid?.amount}
             winningFranchiseName={highestBid?.franchiseName}
           />
-
-          {/* Franchise Participation Real-Time Matrix */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-md">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center justify-between">
-              <span>Franchise Participation Status</span>
-              <span className="text-[11px] text-slate-500 font-normal">Auto-sell triggers when all others OUT</span>
-            </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {franchises.map((f) => {
-                const status = franchiseStatuses[f.id] || "active";
-                const isLeading = highestBid && highestBid.franchiseId === f.id;
-                const squad = players.filter((p) => p.soldToFranchiseId === f.id);
-                const isFull = squad.length >= f.maxSquadSize;
-
-                return (
-                  <div
-                    key={f.id}
-                    className={`p-2.5 rounded-xl border flex items-center justify-between text-xs transition-colors ${
-                      isLeading
-                        ? "bg-emerald-950/40 border-emerald-500/60 text-emerald-300 font-bold"
-                        : status === "out"
-                        ? "bg-red-950/20 border-red-900/40 text-red-400/80 opacity-70"
-                        : status === "skipped"
-                        ? "bg-amber-950/20 border-amber-900/40 text-amber-400/80"
-                        : "bg-slate-950/50 border-slate-800 text-slate-300"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: f.primaryColor }}
-                      />
-                      <span className="truncate">{f.shortName}</span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {isLeading ? (
-                        <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-black">
-                          BID
-                        </span>
-                      ) : status === "out" ? (
-                        <span className="text-[10px] text-red-400 font-bold">OUT</span>
-                      ) : status === "skipped" ? (
-                        <span className="text-[10px] text-amber-400 font-bold">PASS</span>
-                      ) : isFull ? (
-                        <span className="text-[10px] text-slate-500">FULL</span>
-                      ) : (
-                        <span className="text-[10px] text-slate-400">IN</span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
         </div>
 
         {/* Right Column: Engine, Countdown, Bids, Controls */}
@@ -677,72 +525,272 @@ export default function LiveAuctionArenaPage() {
         </div>
       </div>
 
-      {/* ALL FRANCHISES LIVE COMPARISON & FINANCIAL MATRIX */}
-      <FranchiseComparisonMatrix />
+      {/* ======================================================== */}
+      {/* 3. BELOW THE BIDDING ARENA: SECONDARY TOOLS & OVERVIEWS  */}
+      {/* ======================================================== */}
+      <div id="more-controls" className="pt-4 space-y-6">
+        {/* Franchise Participation Real-Time Matrix */}
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-md">
+          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center justify-between">
+            <span>Franchise Live Status (8 Teams)</span>
+            <span className="text-[11px] text-slate-500 font-normal">Auto-sell triggers when all others OUT</span>
+          </h4>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {franchises.map((f) => {
+              const status = franchiseStatuses[f.id] || "active";
+              const isLeading = highestBid && highestBid.franchiseId === f.id;
+              const squad = players.filter((p) => p.soldToFranchiseId === f.id);
+              const isFull = squad.length >= f.maxSquadSize;
 
-      {/* Upcoming Player Queue with Kit Pictures & PSL / T20 Stats */}
-      <UpcomingQueueShowcase />
+              return (
+                <div
+                  key={f.id}
+                  className={`p-2.5 rounded-xl border flex items-center justify-between text-xs transition-colors ${
+                    isLeading
+                      ? "bg-emerald-950/40 border-emerald-500/60 text-emerald-300 font-bold"
+                      : status === "out"
+                      ? "bg-red-950/20 border-red-900/40 text-red-400/80 opacity-70"
+                      : status === "skipped"
+                      ? "bg-amber-950/20 border-amber-900/40 text-amber-400/80"
+                      : "bg-slate-950/50 border-slate-800 text-slate-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: f.primaryColor }}
+                    />
+                    <span className="truncate">{f.shortName}</span>
+                  </div>
 
-      {/* Admin Bottom Auction Controller Bar */}
-      {role === "admin" && (
-        <div className="mt-8 bg-slate-900/95 border border-slate-800 rounded-2xl p-4 shadow-2xl flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Admin Manual Override:
-            </span>
-            <button
-              onClick={() => finalizePlayer(true)}
-              disabled={auctionStatus !== "Live"}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 transition-colors disabled:opacity-40"
-            >
-              <CheckCircle className="w-3.5 h-3.5" /> Sell to Current Bidder
-            </button>
-            <button
-              onClick={() => finalizePlayer(false)}
-              disabled={auctionStatus !== "Live"}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 transition-colors disabled:opacity-40"
-            >
-              <XCircle className="w-3.5 h-3.5" /> Mark Unsold
-            </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {isLeading ? (
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-black">
+                        BID
+                      </span>
+                    ) : status === "out" ? (
+                      <span className="text-[10px] text-red-400 font-bold">OUT</span>
+                    ) : status === "skipped" ? (
+                      <span className="text-[10px] text-amber-400 font-bold">PASS</span>
+                    ) : isFull ? (
+                      <span className="text-[10px] text-slate-500">FULL</span>
+                    ) : (
+                      <span className="text-[10px] text-slate-400">IN</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
+        </div>
 
+        {/* Live Broadcast Feed Banner */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950/70 via-slate-900 to-amber-950/70 border border-emerald-500/30 p-2.5 px-4 shadow-xl flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
-            <button
-              onClick={goToPreviousPlayer}
-              disabled={currentPlayerIndex === 0}
-              className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 disabled:opacity-30 transition-colors"
-              title="Previous Player"
-            >
-              <SkipBack className="w-4 h-4" />
-            </button>
-
-            {auctionStatus === "Live" ? (
-              <button
-                onClick={pauseAuction}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30 transition-colors"
-              >
-                <Pause className="w-4 h-4" /> Pause Auction
-              </button>
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+            <span className="font-black text-white uppercase tracking-wider text-[11px]">BROADCAST FEED:</span>
+          </div>
+          <div className="text-slate-300 font-medium truncate max-w-xl text-[11px]">
+            {highestBid ? (
+              <span>
+                🔥 Leading Bid: <strong className="text-amber-400 font-mono font-bold">{formatPKR(highestBid.amount)}</strong> by <strong className="text-emerald-400 font-bold">{highestBid.franchiseName}</strong> on <strong className="text-white">{currentPlayer?.name}</strong>
+              </span>
+            ) : currentPlayer ? (
+              <span>
+                Now on Block: <strong className="text-emerald-300">{currentPlayer.name}</strong> • Base: <strong className="text-amber-400 font-mono">{formatPKR(currentPlayer.basePrice)}</strong> ({currentPlayer.category})
+              </span>
             ) : (
+              <span>Welcome to the PSL 12 Live Virtual Player Auction Room!</span>
+            )}
+          </div>
+          <div className="hidden sm:flex items-center gap-2 text-slate-400 text-[10px] font-mono">
+            <span>8 FRANCHISES</span>
+            <span>•</span>
+            <span>RTM ENABLED</span>
+          </div>
+        </div>
+
+        {/* Shareable Invite Links & Quick Actions Card */}
+        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-sm font-black text-white">Auction Room Links & Sharing</h3>
+            <p className="text-xs text-slate-400">Copy private passkey invite link for owners or public stream link for spectators.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {activeFranchise && (
               <button
-                onClick={auctionStatus === "Paused" ? resumeAuction : startAuction}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-colors shadow"
+                onClick={() => handleCopyLink("team")}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-950 border border-slate-700 text-slate-200 hover:text-white transition-colors"
+                title="Copy private invite link for this franchise"
               >
-                <Play className="w-4 h-4 fill-slate-950" /> {auctionStatus === "Paused" ? "Resume Auction" : "Start Live Bidding"}
+                {copiedLink === "team" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+                <span>{copiedLink === "team" ? "Link Copied!" : "My Team Link"}</span>
               </button>
             )}
 
             <button
-              onClick={goToNextPlayer}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 text-xs font-bold transition-colors"
-              title="Skip / Next Player"
+              onClick={() => handleCopyLink("spectator")}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-950 border border-slate-700 text-slate-200 hover:text-white transition-colors"
+              title="Copy public read-only spectator stream link"
             >
-              <span>Next Player</span>
-              <SkipForward className="w-4 h-4" />
+              {copiedLink === "spectator" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
+              <span>{copiedLink === "spectator" ? "Spectator Link Copied!" : "Spectator Link"}</span>
+            </button>
+
+            {role === "admin" && (
+              <button
+                onClick={shuffleUpcomingPlayers}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors"
+                title="Shuffle upcoming players randomly for a live draw"
+              >
+                <Shuffle className="w-3.5 h-3.5 text-amber-400" /> Shuffle Order
+              </button>
+            )}
+
+            {unsoldPlayers.length > 0 && auctionStatus !== "Live" && (
+              <button
+                onClick={() => reEnterUnsoldPlayers([], 0)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5" /> Re-Auction Unsold ({unsoldPlayers.length})
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Quick Role Switcher Bar */}
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 px-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400 text-[11px] font-bold">Acting In This Tab As:</span>
+            <span className={`px-2.5 py-0.5 rounded-full font-black text-[11px] border ${
+              role === "admin"
+                ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                : role === "team_owner"
+                ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                : "bg-slate-800 text-slate-300 border-slate-700"
+            }`}>
+              {role === "admin"
+                ? "👑 Super Admin"
+                : role === "team_owner"
+                ? `🏏 ${activeFranchise?.name || "Team Owner"}`
+                : "👁️ Public Spectator"}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1">
+            <span className="text-[10px] text-slate-500 mr-1">Switch Tab Role:</span>
+            <button
+              onClick={() => switchRoleDirectly("admin")}
+              className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors ${
+                role === "admin"
+                  ? "bg-amber-500 text-slate-950 border-amber-400 font-black"
+                  : "bg-slate-900 text-amber-400 border-slate-800 hover:bg-slate-800"
+              }`}
+            >
+              👑 Admin
+            </button>
+            {franchises.map((f) => {
+              const isCurrent = role === "team_owner" && authenticatedFranchiseId === f.id;
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => switchRoleDirectly("team_owner", f.id)}
+                  style={{
+                    borderColor: isCurrent ? f.primaryColor : undefined,
+                    backgroundColor: isCurrent ? `${f.primaryColor}33` : undefined,
+                    color: isCurrent ? "#ffffff" : undefined,
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors ${
+                    isCurrent
+                      ? "font-black"
+                      : "bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800"
+                  }`}
+                  title={`Switch active tab to ${f.name} Owner`}
+                >
+                  {f.shortName}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => switchRoleDirectly("spectator")}
+              className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors ${
+                role === "spectator"
+                  ? "bg-slate-200 text-slate-950 border-white font-black"
+                  : "bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800"
+              }`}
+            >
+              Viewer
             </button>
           </div>
         </div>
-      )}
+
+        {/* ALL FRANCHISES LIVE COMPARISON & FINANCIAL MATRIX */}
+        <FranchiseComparisonMatrix />
+
+        {/* Upcoming Player Queue with Kit Pictures & PSL / T20 Stats */}
+        <UpcomingQueueShowcase />
+
+        {/* Admin Bottom Auction Controller Bar */}
+        {role === "admin" && (
+          <div className="bg-slate-900/95 border border-slate-800 rounded-2xl p-4 shadow-2xl flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Admin Manual Override:
+              </span>
+              <button
+                onClick={() => finalizePlayer(true)}
+                disabled={auctionStatus !== "Live"}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 transition-colors disabled:opacity-40"
+              >
+                <CheckCircle className="w-3.5 h-3.5" /> Sell to Current Bidder
+              </button>
+              <button
+                onClick={() => finalizePlayer(false)}
+                disabled={auctionStatus !== "Live"}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 transition-colors disabled:opacity-40"
+              >
+                <XCircle className="w-3.5 h-3.5" /> Mark Unsold
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={goToPreviousPlayer}
+                disabled={currentPlayerIndex === 0}
+                className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 disabled:opacity-30 transition-colors"
+                title="Previous Player"
+              >
+                <SkipBack className="w-4 h-4" />
+              </button>
+
+              {auctionStatus === "Live" ? (
+                <button
+                  onClick={pauseAuction}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30 transition-colors"
+                >
+                  <Pause className="w-4 h-4" /> Pause Auction
+                </button>
+              ) : (
+                <button
+                  onClick={auctionStatus === "Paused" ? resumeAuction : startAuction}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-colors shadow"
+                >
+                  <Play className="w-4 h-4 fill-slate-950" /> {auctionStatus === "Paused" ? "Resume Auction" : "Start Live Bidding"}
+                </button>
+              )}
+
+              <button
+                onClick={goToNextPlayer}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 text-xs font-bold transition-colors"
+                title="Skip / Next Player"
+              >
+                <span>Next Player</span>
+                <SkipForward className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
