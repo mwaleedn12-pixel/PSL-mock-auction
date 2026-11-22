@@ -59,6 +59,7 @@ export interface Player {
   cricinfoUrl?: string;
   // Right to Match (RTM) previous franchise
   previousFranchiseId?: string;
+  wasRtmUsed?: boolean;
 }
 
 export interface Franchise {
@@ -70,6 +71,8 @@ export interface Franchise {
   primaryColor: string;
   secondaryColor: string;
   ownerName: string;
+  claimedByUserId?: string;
+  isClaimed?: boolean;
   initialPurse: number;
   remainingPurse: number;
   squadCount: number;
@@ -129,6 +132,31 @@ export interface AuctionSettings {
   // Automated Bot Bidding (testing mode)
   botBiddingEnabled?: boolean;
   manualFranchiseId?: string; // defaults to 'iu' (Islamabad United)
+  // Dynamic Admin Rules
+  allowRetentions?: boolean;
+  allowTradesBeforeAuction?: boolean;
+  allowTradesAfterAuction?: boolean;
+  reEnterUnsoldRule?: 'all' | 'selected' | 'none';
+  unsoldDiscountPercent?: number;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  name: string;
+  createdAt: number;
+}
+
+export interface AuctionMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderRole: UserRole;
+  franchiseId?: string;
+  franchiseName?: string;
+  channel: 'owners' | 'spectators';
+  text: string;
+  timestamp: number;
 }
 
 export interface RtmState {

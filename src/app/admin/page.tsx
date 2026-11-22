@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useAuction } from "@/context/AuctionContext";
 import { formatPKR } from "@/lib/rules";
-import { RulePreset } from "@/types/auction";
-import { AuthModal } from "@/components/AuthModal";
-import { Psl11RetentionManager } from "@/components/Psl11RetentionManager";
+import { INITIAL_PLAYERS } from "@/data/initialPlayers";
+import { exportAuctionToExcel, exportPlayersToCsv, exportSquadsToCsv } from "@/lib/export";
 import {
   Sliders,
   Play,
@@ -30,11 +30,27 @@ import {
   CheckSquare,
   Square,
   TrendingDown,
+  UserPlus,
+  PlusCircle,
+  FileSpreadsheet,
+  Download,
+  Share2,
+  ExternalLink,
+  MessageSquare,
+  ArrowRight,
+  Gavel,
+  XCircle,
+  SkipForward,
+  SkipBack,
+  AlertTriangle,
 } from "lucide-react";
 
 export default function AdminControlPanelPage() {
   const {
     role,
+    loginAsAdmin,
+    signupAdmin,
+    adminUser,
     auctionStatus,
     settings,
     updateSettings,
@@ -44,48 +60,69 @@ export default function AdminControlPanelPage() {
     pauseAuction,
     resumeAuction,
     resetAuction,
+    finalizePlayer,
+    goToNextPlayer,
+    goToPreviousPlayer,
     startRoundTwo,
     reEnterUnsoldPlayers,
     shuffleUpcomingPlayers,
     franchises,
     players,
-    retainPlayer,
-    directSignPlayer,
+    importPlayersList,
+    addNewPlayerDuringAuction,
+    tradeOffers,
+    handleTradeAction,
+    eventLogs,
+    isCloudConnected,
   } = useAuction();
 
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  // Authentication State for Admin Login / Signup
+  const [authTab, setAuthTab] = useState<"login" | "signup">("login");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminName, setAdminName] = useState("");
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  // Admin Dashboard Active Tab
+  const [adminTab, setAdminTab] = useState<"setup" | "rules" | "lobby" | "live" | "trades" | "reports">("setup");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Settings form state
   const [roomName, setRoomName] = useState(settings.name);
   const [roomCode, setRoomCode] = useState(settings.roomCode);
+  const [totalPurse, setTotalPurse] = useState(settings.totalPursePerTeam);
   const [timerSeconds, setTimerSeconds] = useState(settings.defaultTimerSeconds);
-  const [timerResetSeconds, setTimerResetSeconds] = useState(settings.timerResetSeconds || 15);
   const [minSquad, setMinSquad] = useState(settings.minSquadSize);
   const [maxSquad, setMaxSquad] = useState(settings.maxSquadSize);
+  const [minOverseas, setMinOverseas] = useState(settings.minOverseasPlayingXI || 3);
+  const [maxOverseas, setMaxOverseas] = useState(settings.maxOverseasPlayingXI || 4);
+  const [minU23Squad, setMinU23Squad] = useState(settings.minUncappedU23Squad ?? 2);
   const [playerOccurrence, setPlayerOccurrence] = useState<'sequential' | 'random'>(
     settings.playerOccurrenceOrder || 'sequential'
   );
   const [enableRTM, setEnableRTM] = useState(settings.enableRTM ?? true);
   const [rtmCards, setRtmCards] = useState(settings.rtmCardsPerFranchise ?? 2);
-  const [minU23Squad, setMinU23Squad] = useState(settings.minUncappedU23Squad ?? 2);
-  const [minU23PlayingXI, setMinU23PlayingXI] = useState(settings.minUncappedU23PlayingXI ?? 1);
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [allowRetentions, setAllowRetentions] = useState(settings.allowRetentions ?? true);
+  const [allowTradesBefore, setAllowTradesBefore] = useState(settings.allowTradesBeforeAuction ?? true);
+  const [allowTradesAfter, setAllowTradesAfter] = useState(settings.allowTradesAfterAuction ?? true);
 
-  // Pre-Auction Retention State
-  const [assignType, setAssignType] = useState<"retention" | "direct">("retention");
-  const [selectedFranchise, setSelectedFranchise] = useState(franchises[0]?.id || "iu");
-  const [selectedPlayer, setSelectedPlayer] = useState(players[0]?.id || "");
-  const [assignPrice, setAssignPrice] = useState(42000000);
-  const [assignSuccess, setAssignSuccess] = useState<string | null>(null);
+  // New Player Manual Input Form
+  const [newPlayerName, setNewPlayerName] = useState("");
+  const [newPlayerCategory, setNewPlayerCategory] = useState<"Platinum" | "Diamond" | "Gold" | "Silver" | "Emerging">("Gold");
+  const [newPlayerRole, setNewPlayerRole] = useState<"Batter" | "Bowler" | "All-Rounder" | "Wicketkeeper">("All-Rounder");
+  const [newPlayerBasePrice, setNewPlayerBasePrice] = useState(15000000);
+  const [newPlayerNationality, setNewPlayerNationality] = useState("Pakistan");
+  const [newPlayerAge, setNewPlayerAge] = useState(25);
+  const [playerAddSuccess, setPlayerAddSuccess] = useState<string | null>(null);
 
   // Re-entering Unsold Players State
-  const [selectedUnsoldIds, setSelectedUnsoldIds] = useState<string[]>([]);
   const [reAuctionDiscount, setReAuctionDiscount] = useState<number>(0);
   const [reAuctionSuccess, setReAuctionSuccess] = useState<string | null>(null);
 
   const unsoldPlayers = players.filter((p) => p.status === "unsold");
   const upcomingPlayers = players.filter((p) => p.status === "upcoming");
+  const soldPlayers = players.filter((p) => p.status === "sold");
 
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -93,643 +130,926 @@ export default function AdminControlPanelPage() {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  const handleAdminAuth = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    if (authTab === "login") {
+      const res = loginAsAdmin(adminPassword);
+      if (!res.success) setAuthError(res.message);
+    } else {
+      const res = signupAdmin(adminEmail, adminPassword, adminName);
+      if (!res.success) setAuthError(res.message);
+    }
+  };
+
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     updateSettings({
       name: roomName,
       roomCode: roomCode,
+      totalPursePerTeam: Number(totalPurse),
       defaultTimerSeconds: Number(timerSeconds),
-      timerResetSeconds: Number(timerResetSeconds),
       minSquadSize: Number(minSquad),
       maxSquadSize: Number(maxSquad),
-      playerOccurrenceOrder: playerOccurrence,
-      enableRTM: enableRTM,
-      rtmCardsPerFranchise: Number(rtmCards),
+      minOverseasPlayingXI: Number(minOverseas),
+      maxOverseasPlayingXI: Number(maxOverseas),
       minUncappedU23Squad: Number(minU23Squad),
-      minUncappedU23PlayingXI: Number(minU23PlayingXI),
+      playerOccurrenceOrder: playerOccurrence,
+      enableRTM,
+      rtmCardsPerFranchise: Number(rtmCards),
+      allowRetentions,
+      allowTradesBeforeAuction: allowTradesBefore,
+      allowTradesAfterAuction: allowTradesAfter,
     });
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);
   };
 
-  const handleAssignPlayer = (e: React.FormEvent) => {
+  const handleLoadOfficialPslPool = () => {
+    importPlayersList(INITIAL_PLAYERS);
+    setPlayerAddSuccess(`Successfully loaded ${INITIAL_PLAYERS.length} official verified PSL players with authentic stats!`);
+    setTimeout(() => setPlayerAddSuccess(null), 4000);
+  };
+
+  const handleAddNewPlayer = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPlayer || !selectedFranchise) return;
+    if (!newPlayerName.trim()) return;
 
-    if (assignType === "retention") {
-      retainPlayer(selectedFranchise, selectedPlayer, Number(assignPrice));
-      setAssignSuccess("Player retained! Budget deducted from team purse.");
-    } else {
-      directSignPlayer(selectedFranchise, selectedPlayer, Number(assignPrice));
-      setAssignSuccess("Player directly signed! Budget deducted from team purse.");
-    }
-    setTimeout(() => setAssignSuccess(null), 3000);
+    addNewPlayerDuringAuction({
+      name: newPlayerName.trim(),
+      category: newPlayerCategory,
+      primaryRole: newPlayerRole,
+      basePrice: Number(newPlayerBasePrice),
+      nationality: newPlayerNationality,
+      isOverseas: newPlayerNationality.toLowerCase() !== "pakistan",
+      age: Number(newPlayerAge),
+    });
+
+    setPlayerAddSuccess(`Player ${newPlayerName} successfully added to the auction pool!`);
+    setNewPlayerName("");
+    setTimeout(() => setPlayerAddSuccess(null), 4000);
   };
 
-  const toggleSelectUnsold = (id: string) => {
-    setSelectedUnsoldIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  };
-
-  const handleSelectAllUnsold = () => {
-    if (selectedUnsoldIds.length === unsoldPlayers.length) {
-      setSelectedUnsoldIds([]);
-    } else {
-      setSelectedUnsoldIds(unsoldPlayers.map((p) => p.id));
-    }
-  };
-
-  const handleLaunchReAuction = () => {
-    if (unsoldPlayers.length === 0) return;
-    const idsToReEnter = selectedUnsoldIds.length > 0 ? selectedUnsoldIds : unsoldPlayers.map((p) => p.id);
-    reEnterUnsoldPlayers(idsToReEnter, reAuctionDiscount);
-    setReAuctionSuccess(`Re-entered ${idsToReEnter.length} players into the live auction pool!`);
-    setTimeout(() => setReAuctionSuccess(null), 4000);
-  };
-
-  // If not logged in as Admin, show lock gate
+  // If not authenticated as Admin, show clean light Login / Signup card
   if (role !== "admin") {
     return (
-      <div className="max-w-md mx-auto my-16 bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center shadow-2xl">
-        <Lock className="w-12 h-12 text-amber-400 mx-auto mb-3" />
-        <h2 className="text-xl font-black text-white">Super Admin Access Required</h2>
-        <p className="text-xs text-slate-400 mt-2">
-          Only the Super Administrator can configure auction room settings, generate private team passkeys, and manage tournament rules.
-        </p>
-        <button
-          onClick={() => setIsAuthModalOpen(true)}
-          className="mt-6 w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-colors shadow-lg shadow-amber-500/25"
-        >
-          Login as Super Admin
-        </button>
-        <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+      <div className="max-w-md mx-auto py-12 px-4 animate-fadeIn">
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-xl p-6 sm:p-8">
+          <div className="text-center mb-6">
+            <div className="w-14 h-14 bg-emerald-100 border border-emerald-300 rounded-2xl flex items-center justify-center mx-auto mb-3 text-emerald-700 shadow-sm">
+              <Crown className="w-7 h-7" />
+            </div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Admin Control Room</h1>
+            <p className="text-xs text-slate-500 mt-1">
+              Sign in or create an administrator account to configure rules and run the auction.
+            </p>
+          </div>
+
+          <div className="flex rounded-xl bg-slate-100 p-1 mb-5 text-xs font-bold">
+            <button
+              onClick={() => { setAuthTab("login"); setAuthError(null); }}
+              className={`flex-1 py-2 rounded-lg transition-colors ${authTab === "login" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900"}`}
+            >
+              Admin Sign In
+            </button>
+            <button
+              onClick={() => { setAuthTab("signup"); setAuthError(null); }}
+              className={`flex-1 py-2 rounded-lg transition-colors ${authTab === "signup" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900"}`}
+            >
+              Create Account
+            </button>
+          </div>
+
+          {authError && (
+            <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
+              {authError}
+            </div>
+          )}
+
+          <form onSubmit={handleAdminAuth} className="space-y-4">
+            {authTab === "signup" && (
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Your Full Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. PCB Commissioner"
+                  value={adminName}
+                  onChange={(e) => setAdminName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-900 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            )}
+
+            {authTab === "signup" && (
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Admin Email</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="admin@psl-mock.com"
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-900 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">
+                {authTab === "login" ? "Admin Master Password" : "Create Password"}
+              </label>
+              <input
+                type="password"
+                required
+                placeholder={authTab === "login" ? "Enter admin password (e.g. admin123)" : "Choose a secure password"}
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-900 focus:outline-none focus:border-emerald-500"
+              />
+              {authTab === "login" && (
+                <p className="text-[11px] text-slate-400 mt-1">Default master key: <code className="font-mono font-bold text-emerald-600">admin123</code></p>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider transition-colors shadow-lg shadow-emerald-600/20 mt-2"
+            >
+              {authTab === "login" ? "Unlock Admin Room" : "Register Admin Account"}
+            </button>
+          </form>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 animate-fadeIn pb-12">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-        <div>
-          <div className="flex items-center gap-2">
-            <Crown className="w-5 h-5 text-amber-400" />
-            <span className="text-xs font-black uppercase tracking-wider text-amber-400">
-              Super Administrator Control Room
-            </span>
+    <div className="space-y-6 animate-fadeIn pb-16">
+      {/* Admin Top Dashboard Banner */}
+      <div className="rounded-3xl bg-white border border-slate-200 p-5 sm:p-6 shadow-sm flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 bg-amber-100 border border-amber-300 rounded-2xl flex items-center justify-center text-amber-700 font-black text-xl shadow-sm">
+            👑
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
-            Auction Management &amp; Franchise Links
-          </h1>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Super Admin Command Center</h1>
+              <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${
+                auctionStatus === "Live"
+                  ? "bg-emerald-100 text-emerald-800 border-emerald-300 animate-pulse"
+                  : "bg-amber-100 text-amber-800 border-amber-300"
+              }`}>
+                ● {auctionStatus.toUpperCase()}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Logged in as: <strong className="text-slate-800">{adminUser?.name || "Super Admin"}</strong> • Room Code: <strong className="text-emerald-700 font-mono font-bold">{settings.roomCode}</strong>
+            </p>
+          </div>
         </div>
 
-        {/* Live Auction Controller Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
-          {auctionStatus === "Live" ? (
+        {/* Quick Launch & Arena Link */}
+        <div className="flex items-center gap-2">
+          {auctionStatus !== "Live" ? (
             <button
-              onClick={pauseAuction}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors"
+              onClick={startAuction}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.02]"
             >
-              <Pause className="w-4 h-4" /> Pause Live Auction
+              <Play className="w-4 h-4 fill-current" />
+              <span>Start Live Auction</span>
             </button>
           ) : (
             <button
-              onClick={auctionStatus === "Paused" ? resumeAuction : startAuction}
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-colors shadow-lg shadow-emerald-500/20"
+              onClick={pauseAuction}
+              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow transition-colors"
             >
-              <Play className="w-4 h-4 fill-slate-950" /> {auctionStatus === "Paused" ? "Resume Auction" : "Start Live Auction"}
+              <Pause className="w-4 h-4" />
+              <span>Pause Auction</span>
             </button>
           )}
 
-          <button
-            onClick={() => {
-              if (confirm("Reset the entire auction room, squads, and purses to initial state?")) {
-                resetAuction();
-              }
-            }}
-            className="p-2.5 rounded-xl bg-red-950/40 hover:bg-red-950/60 border border-red-500/40 text-red-300 transition-colors"
-            title="Reset Auction"
+          <Link
+            href="/auction"
+            className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 transition-colors shadow"
           >
-            <RotateCcw className="w-4 h-4" />
-          </button>
+            <Gavel className="w-4 h-4" />
+            <span>Open Arena</span>
+          </Link>
         </div>
       </div>
 
-      {/* Official Rule Presets Selector */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-base font-black text-white flex items-center gap-2">
-              <Layers className="w-5 h-5 text-emerald-400" /> Official Rules Preset Selector
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Switch between published PSL 11 Auction Rules and the announced PSL 12 Framework.
-            </p>
-          </div>
-          <span className="text-xs px-2.5 py-1 rounded-full font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase">
-            Active: {rulePreset === "PSL11" ? "PSL 11 Rules" : "PSL 12 Framework"}
-          </span>
-        </div>
+      {/* Admin Horizontal Tabs */}
+      <div className="flex items-center gap-2 p-1.5 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-x-auto text-xs font-bold no-scrollbar">
+        <button
+          onClick={() => setAdminTab("setup")}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl whitespace-nowrap transition-colors ${
+            adminTab === "setup"
+              ? "bg-emerald-600 text-white shadow-sm"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          <span>1. Player Pool ({players.length})</span>
+        </button>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Preset A: PSL 11 */}
-          <div
-            onClick={() => setRulePreset("PSL11")}
-            className={`p-5 rounded-2xl border cursor-pointer transition-all ${
-              rulePreset === "PSL11"
-                ? "bg-emerald-950/40 border-emerald-500/70 shadow-lg shadow-emerald-500/10"
-                : "bg-slate-950/50 border-slate-800 hover:border-slate-700"
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <h4 className="font-black text-sm text-white">PRESET A: PSL 11 Official Rules</h4>
-              {rulePreset === "PSL11" && <Check className="w-4 h-4 text-emerald-400" />}
-            </div>
-            <ul className="text-xs text-slate-300 space-y-1.5 mt-3">
-              <li>• Standard Purse: <strong>PKR 45 Crore</strong> (expandable to 50.5 Cr)</li>
-              <li>• 4 Base Price Brackets: <strong>4.2 Cr, 2.2 Cr, 1.1 Cr, 60 Lakh</strong></li>
-              <li>• Increments: <strong>2.5L, 5L, 10L, 15L</strong></li>
-              <li>• Squad size: <strong>16 to 20</strong> (Overseas: 5 to 7 by squad size)</li>
-              <li>• Playing XI: <strong>3 to 4 Overseas</strong> (min 7 locals)</li>
-              <li>• Under-23: <strong>Min 2 in squad, at least 1 in Playing XI</strong></li>
-              <li>• Retentions: <strong>Max 4 players</strong> • Direct Foreign Signings: <strong>1</strong></li>
-            </ul>
-          </div>
+        <button
+          onClick={() => setAdminTab("rules")}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl whitespace-nowrap transition-colors ${
+            adminTab === "rules"
+              ? "bg-emerald-600 text-white shadow-sm"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+          }`}
+        >
+          <Sliders className="w-4 h-4" />
+          <span>2. Auction Rules</span>
+        </button>
 
-          {/* Preset B: PSL 12 */}
-          <div
-            onClick={() => setRulePreset("PSL12")}
-            className={`p-5 rounded-2xl border cursor-pointer transition-all ${
-              rulePreset === "PSL12"
-                ? "bg-amber-950/40 border-amber-500/70 shadow-lg shadow-amber-500/10"
-                : "bg-slate-950/50 border-slate-800 hover:border-slate-700"
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <h4 className="font-black text-sm text-white">PRESET B: PSL 12 Announced Framework</h4>
-              {rulePreset === "PSL12" && <Check className="w-4 h-4 text-amber-400" />}
-            </div>
-            <ul className="text-xs text-slate-300 space-y-1.5 mt-3">
-              <li>• Salary Cap: <strong>PKR 45 Crore</strong> (rising to 50.5 Cr qualifying)</li>
-              <li>• Minimum Spend: <strong>PKR 36.5 Crore</strong></li>
-              <li>• 1 Direct Marquee Signing (must not have featured in PSL 10 or 11)</li>
-              <li>• Retentions deadline: <strong>13 January 2027</strong></li>
-              <li>• 8 Franchises unanimous framework adoption</li>
-            </ul>
-          </div>
-        </div>
+        <button
+          onClick={() => setAdminTab("lobby")}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl whitespace-nowrap transition-colors ${
+            adminTab === "lobby"
+              ? "bg-emerald-600 text-white shadow-sm"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>3. Owner Links &amp; Lobby</span>
+        </button>
+
+        <button
+          onClick={() => setAdminTab("live")}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl whitespace-nowrap transition-colors ${
+            adminTab === "live"
+              ? "bg-emerald-600 text-white shadow-sm"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+          }`}
+        >
+          <Gavel className="w-4 h-4" />
+          <span>4. Live Overrides</span>
+        </button>
+
+        <button
+          onClick={() => setAdminTab("trades")}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl whitespace-nowrap transition-colors ${
+            adminTab === "trades"
+              ? "bg-emerald-600 text-white shadow-sm"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+          }`}
+        >
+          <RefreshCw className="w-4 h-4" />
+          <span>5. Trade Desk ({tradeOffers.filter(t => t.status === 'accepted').length})</span>
+        </button>
+
+        <button
+          onClick={() => setAdminTab("reports")}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl whitespace-nowrap transition-colors ${
+            adminTab === "reports"
+              ? "bg-emerald-600 text-white shadow-sm"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+          }`}
+        >
+          <Download className="w-4 h-4" />
+          <span>6. Reports &amp; Downloads</span>
+        </button>
       </div>
 
-      {/* Private Team Owner Links & Passkeys Matrix */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-4 border-b border-slate-800">
-          <div>
-            <h3 className="text-base font-black text-white flex items-center gap-2">
-              <Key className="w-5 h-5 text-amber-400" /> Franchise Invite Links &amp; Passkeys
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Copy direct invite links for each franchise owner. Clicking the link automatically logs them into their team dashboard.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
+      {/* ======================================================== */}
+      {/* TAB 1: PLAYER POOL SETUP & DYNAMIC PLAYER ADDITION       */}
+      {/* ======================================================== */}
+      {adminTab === "setup" && (
+        <div className="space-y-6">
+          {/* Quick 1-Click Load Official Pool Banner */}
+          <div className="p-6 rounded-3xl bg-gradient-to-r from-emerald-50 via-teal-50 to-white border-2 border-emerald-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+            <div>
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-emerald-600" />
+                <h3 className="text-base font-black text-slate-900">Official PSL 11 / PSL 12 Players Pool</h3>
+              </div>
+              <p className="text-xs text-slate-600 mt-1 max-w-xl">
+                Load 58 verified players complete with authentic PSL/T20 stats, kit photos, and Cricinfo profiles with a single click.
+              </p>
+            </div>
             <button
-              onClick={() => {
-                const origin = typeof window !== "undefined" ? window.location.origin : "";
-                copyToClipboard(`${origin}/auction?role=spectator`, "spectator");
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-950 border border-slate-800 text-slate-300 hover:text-white transition-colors"
+              onClick={handleLoadOfficialPslPool}
+              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider shadow transition-colors shrink-0"
             >
-              {copiedKey === "spectator" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
-              <span>{copiedKey === "spectator" ? "Spectator Link Copied!" : "Copy Public Viewer Link"}</span>
+              ⚡ Load Official Pool ({INITIAL_PLAYERS.length} Players)
             </button>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
-          {franchises.map((f) => {
-            const origin = typeof window !== "undefined" ? window.location.origin : "";
-            const inviteUrl = `${origin}/auction?join=${f.privatePasskey}`;
+          {playerAddSuccess && (
+            <div className="p-4 rounded-2xl bg-emerald-100 border border-emerald-300 text-emerald-900 font-bold text-xs flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-emerald-600" />
+              <span>{playerAddSuccess}</span>
+            </div>
+          )}
 
-            return (
-              <div
-                key={f.id}
-                className="bg-slate-950/70 p-4 rounded-2xl border border-slate-800 flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: f.primaryColor }} />
-                    <span className="font-black text-xs text-white">{f.name}</span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 mt-1">Owner: {f.ownerName}</p>
-                  <p className="text-[11px] text-amber-400 font-bold mt-0.5">Purse: {formatPKR(f.remainingPurse)}</p>
-                </div>
-
-                <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] text-slate-500 block">Passkey:</span>
-                    <code className="text-xs font-mono font-black text-amber-400 tracking-wider">
-                      {f.privatePasskey}
-                    </code>
-                  </div>
-                  <button
-                    onClick={() => copyToClipboard(inviteUrl, f.id)}
-                    className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-bold flex items-center gap-1 transition-colors"
-                    title="Copy direct invite link for this team"
-                  >
-                    {copiedKey === f.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedKey === f.id ? "Copied!" : "Copy Link"}</span>
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Grid: Room Settings, Occurrence Order, U-23, and RTM Settings */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Comprehensive Settings Form */}
-        <div className="lg:col-span-7 bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <h3 className="text-base font-black text-white flex items-center gap-2">
-              <Clock className="w-5 h-5 text-emerald-400" /> Auction Room &amp; Rules Settings
+          {/* Add Player (Works Pre-Auction and DURING Live Auction) */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+            <h3 className="text-base font-black text-slate-900 mb-1 flex items-center gap-2">
+              <PlusCircle className="w-5 h-5 text-emerald-600" />
+              <span>Add Player to Pool (Can Add Anytime During Live Auction)</span>
             </h3>
-            {saveSuccess && (
-              <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
-                <CheckCircle className="w-3.5 h-3.5" /> Saved Successfully!
-              </span>
-            )}
-          </div>
+            <p className="text-xs text-slate-500 mb-4">
+              Add individual new players directly into the live upcoming auction queue.
+            </p>
 
-          <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-slate-400 font-bold mb-1">Auction Room Name</label>
+            <form onSubmit={handleAddNewPlayer} className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+              <div className="sm:col-span-2">
+                <label className="font-bold text-slate-700 block mb-1">Player Full Name</label>
                 <input
                   type="text"
-                  value={roomName}
-                  onChange={(e) => setRoomName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none"
+                  required
+                  placeholder="e.g. Sahibzada Farhan"
+                  value={newPlayerName}
+                  onChange={(e) => setNewPlayerName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-900 font-semibold focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 font-bold mb-1">Room Code</label>
-                <input
-                  type="text"
-                  value={roomCode}
-                  onChange={(e) => setRoomCode(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-amber-400 font-mono font-bold focus:outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Timer Settings */}
-            <div className="grid grid-cols-2 gap-3 bg-slate-950/60 p-3 rounded-2xl border border-slate-800">
-              <div>
-                <label className="block text-slate-400 font-bold mb-1">Opening Player Timer (seconds)</label>
-                <input
-                  type="number"
-                  value={timerSeconds}
-                  onChange={(e) => setTimerSeconds(Number(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none"
-                />
-                <span className="text-[10px] text-slate-500 mt-0.5 block">Wait time before opening bid starts</span>
-              </div>
-              <div>
-                <label className="block text-slate-400 font-bold mb-1">Timer Reset on Bid (seconds)</label>
-                <input
-                  type="number"
-                  value={timerResetSeconds}
-                  onChange={(e) => setTimerResetSeconds(Number(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none"
-                />
-                <span className="text-[10px] text-slate-500 mt-0.5 block">Countdown reset duration after each bid</span>
-              </div>
-            </div>
-
-            {/* Player Occurrence Order: Sequential vs Randomized Draw */}
-            <div className="bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800 space-y-2">
-              <label className="block text-slate-300 font-bold flex items-center justify-between">
-                <span>Player Occurrence Order:</span>
-                <span className="text-[10px] text-amber-400 uppercase font-black">
-                  {playerOccurrence === "random" ? "Randomized Draw Pot" : "Sequential Order"}
-                </span>
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPlayerOccurrence("sequential")}
-                  className={`py-2 px-3 rounded-xl font-bold border text-left transition-colors ${
-                    playerOccurrence === "sequential"
-                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
-                      : "bg-slate-900 text-slate-400 border-slate-800"
-                  }`}
-                >
-                  <span className="block font-black text-xs">Sequential Order</span>
-                  <span className="text-[10px] opacity-80 font-normal">Platinum, Diamond, Gold, Silver...</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPlayerOccurrence("random")}
-                  className={`py-2 px-3 rounded-xl font-bold border text-left transition-colors ${
-                    playerOccurrence === "random"
-                      ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
-                      : "bg-slate-900 text-slate-400 border-slate-800"
-                  }`}
-                >
-                  <span className="block font-black text-xs">Randomized Draw</span>
-                  <span className="text-[10px] opacity-80 font-normal">Pot draw in random surprise order</span>
-                </button>
-              </div>
-            </div>
-
-            {/* U-23 Mandates & Squad Sizes */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 bg-slate-950/60 p-3 rounded-2xl border border-slate-800">
-              <div>
-                <label className="block text-slate-400 font-bold mb-1">Min Squad</label>
-                <input
-                  type="number"
-                  value={minSquad}
-                  onChange={(e) => setMinSquad(Number(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white font-mono focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-400 font-bold mb-1">Max Squad</label>
-                <input
-                  type="number"
-                  value={maxSquad}
-                  onChange={(e) => setMaxSquad(Number(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white font-mono focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-400 font-bold mb-1">Min U23 Squad</label>
-                <input
-                  type="number"
-                  value={minU23Squad}
-                  onChange={(e) => setMinU23Squad(Number(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white font-mono focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-400 font-bold mb-1">Min U23 in XI</label>
-                <input
-                  type="number"
-                  value={minU23PlayingXI}
-                  onChange={(e) => setMinU23PlayingXI(Number(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white font-mono focus:outline-none"
-                />
-              </div>
-            </div>
-
-            {/* RTM (Right to Match) Settings */}
-            <div className="bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800 flex items-center justify-between">
-              <div>
-                <span className="font-bold text-white block">Right to Match (RTM) Cards</span>
-                <span className="text-[11px] text-slate-400">
-                  Allow previous franchise to match the highest bid with final price revision
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
+                <label className="font-bold text-slate-700 block mb-1">Category</label>
                 <select
-                  value={rtmCards}
-                  onChange={(e) => setRtmCards(Number(e.target.value))}
-                  className="bg-slate-900 text-amber-300 font-bold border border-slate-700 rounded-xl px-2.5 py-1.5"
+                  value={newPlayerCategory}
+                  onChange={(e) => setNewPlayerCategory(e.target.value as any)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-900 font-semibold focus:outline-none"
                 >
-                  <option value={1}>1 Card each</option>
-                  <option value={2}>2 Cards each</option>
-                  <option value={3}>3 Cards each</option>
+                  <option value="Platinum">Platinum (PKR 4.2 Cr)</option>
+                  <option value="Diamond">Diamond (PKR 2.2 Cr)</option>
+                  <option value="Gold">Gold (PKR 1.5 Cr)</option>
+                  <option value="Silver">Silver (PKR 70 L)</option>
+                  <option value="Emerging">Emerging (PKR 35 L)</option>
                 </select>
-                <button
-                  type="button"
-                  onClick={() => setEnableRTM(!enableRTM)}
-                  className={`px-3 py-1.5 rounded-xl font-bold text-xs uppercase transition-colors ${
-                    enableRTM ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40" : "bg-slate-800 text-slate-500"
-                  }`}
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Primary Role</label>
+                <select
+                  value={newPlayerRole}
+                  onChange={(e) => setNewPlayerRole(e.target.value as any)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-900 font-semibold focus:outline-none"
                 >
-                  {enableRTM ? "Enabled" : "Disabled"}
+                  <option value="Batter">Batter</option>
+                  <option value="Bowler">Bowler</option>
+                  <option value="All-Rounder">All-Rounder</option>
+                  <option value="Wicketkeeper">Wicketkeeper</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Base Price (PKR)</label>
+                <input
+                  type="number"
+                  required
+                  value={newPlayerBasePrice}
+                  onChange={(e) => setNewPlayerBasePrice(Number(e.target.value))}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-900 font-semibold focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Nationality</label>
+                <input
+                  type="text"
+                  required
+                  value={newPlayerNationality}
+                  onChange={(e) => setNewPlayerNationality(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-900 font-semibold focus:outline-none"
+                />
+              </div>
+
+              <div className="sm:col-span-3 lg:col-span-6 flex justify-end mt-2">
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-wider transition-colors shadow"
+                >
+                  + Add Player to Live Queue
                 </button>
               </div>
+            </form>
+          </div>
+
+          {/* Player Breakdown Metrics */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+              <span className="text-[10px] font-bold uppercase text-slate-400 block">Total Pool</span>
+              <p className="text-2xl font-black text-slate-900 mt-1">{players.length}</p>
             </div>
-
-            <button
-              type="submit"
-              className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow"
-            >
-              <Save className="w-4 h-4" /> Save Auction Settings
-            </button>
-          </form>
+            <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+              <span className="text-[10px] font-bold uppercase text-slate-400 block">Upcoming</span>
+              <p className="text-2xl font-black text-emerald-600 mt-1">{upcomingPlayers.length}</p>
+            </div>
+            <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+              <span className="text-[10px] font-bold uppercase text-slate-400 block">Sold</span>
+              <p className="text-2xl font-black text-amber-600 mt-1">{soldPlayers.length}</p>
+            </div>
+            <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+              <span className="text-[10px] font-bold uppercase text-slate-400 block">Unsold</span>
+              <p className="text-2xl font-black text-red-600 mt-1">{unsoldPlayers.length}</p>
+            </div>
+          </div>
         </div>
+      )}
 
-        {/* Unsold Players Re-Auction Manager */}
-        <div className="lg:col-span-5 bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="text-base font-black text-white flex items-center gap-2">
-                <RefreshCw className="w-5 h-5 text-amber-400" /> Accelerated Unsold Re-Auction
-              </h3>
-              <span className="text-xs bg-slate-950 text-amber-400 font-bold px-2.5 py-1 rounded-xl border border-slate-800">
-                {unsoldPlayers.length} Unsold
+      {/* ======================================================== */}
+      {/* TAB 2: AUCTION RULES CONFIGURATION                       */}
+      {/* ======================================================== */}
+      {adminTab === "rules" && (
+        <form onSubmit={handleSaveSettings} className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div>
+              <h3 className="text-lg font-black text-slate-900">Configure Auction Rules &amp; Framework</h3>
+              <p className="text-xs text-slate-500">All modifications immediately synchronize to all franchise owners and spectators.</p>
+            </div>
+            {saveSuccess && (
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 animate-fadeIn">
+                <Check className="w-3.5 h-3.5" /> Rules Synchronized!
               </span>
-            </div>
-
-            <p className="text-xs text-slate-400 mt-3">
-              Re-enter all or selected unsold players back into the live auction pool with optional base price discount.
-            </p>
-
-            {reAuctionSuccess && (
-              <div className="mt-3 p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/50 text-xs text-emerald-300 font-semibold flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-emerald-400" />
-                <span>{reAuctionSuccess}</span>
-              </div>
             )}
-
-            {/* Discount Selector */}
-            <div className="mt-4 p-3 bg-slate-950/60 rounded-2xl border border-slate-800 text-xs space-y-1.5">
-              <label className="block text-slate-300 font-bold">Base Price Discount Factor:</label>
-              <div className="grid grid-cols-4 gap-1.5">
-                {[0, 10, 15, 20].map((disc) => (
-                  <button
-                    key={disc}
-                    type="button"
-                    onClick={() => setReAuctionDiscount(disc)}
-                    className={`py-1.5 rounded-lg font-bold transition-colors ${
-                      reAuctionDiscount === disc
-                        ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                        : "bg-slate-900 text-slate-400 border border-slate-800"
-                    }`}
-                  >
-                    {disc === 0 ? "Original" : `-${disc}%`}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Unsold Players Selector List */}
-            <div className="mt-4">
-              <div className="flex items-center justify-between text-xs mb-2">
-                <span className="text-slate-400 font-bold">Select Players to Re-enter:</span>
-                <button
-                  type="button"
-                  onClick={handleSelectAllUnsold}
-                  className="text-emerald-400 hover:underline font-semibold"
-                >
-                  {selectedUnsoldIds.length === unsoldPlayers.length && unsoldPlayers.length > 0
-                    ? "Deselect All"
-                    : "Select All"}
-                </button>
-              </div>
-
-              <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
-                {unsoldPlayers.length === 0 ? (
-                  <p className="text-xs text-slate-500 text-center py-6">No players currently unsold.</p>
-                ) : (
-                  unsoldPlayers.map((p) => {
-                    const isSelected = selectedUnsoldIds.includes(p.id);
-                    return (
-                      <div
-                        key={p.id}
-                        onClick={() => toggleSelectUnsold(p.id)}
-                        className={`p-2 rounded-xl border flex items-center justify-between text-xs cursor-pointer transition-colors ${
-                          isSelected
-                            ? "bg-amber-950/20 border-amber-500/50 text-white"
-                            : "bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          {isSelected ? (
-                            <CheckSquare className="w-4 h-4 text-amber-400" />
-                          ) : (
-                            <Square className="w-4 h-4 text-slate-600" />
-                          )}
-                          <span className="font-bold">{p.name}</span>
-                          <span className="text-[10px] text-slate-500">({p.category})</span>
-                        </div>
-                        <span className="font-mono text-slate-400">{formatPKR(p.basePrice)}</span>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
           </div>
 
-          <button
-            type="button"
-            disabled={unsoldPlayers.length === 0}
-            onClick={handleLaunchReAuction}
-            className="w-full mt-4 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow"
-          >
-            <RefreshCw className="w-4 h-4" /> Launch Re-Auction Round (
-            {selectedUnsoldIds.length > 0 ? selectedUnsoldIds.length : unsoldPlayers.length})
-          </button>
-        </div>
-      </div>
-
-      {/* Official PSL 11 Squads & Real Retention Pricing for PSL 12 */}
-      <Psl11RetentionManager />
-
-      {/* Pre-Auction Retentions & Direct Foreign Signings */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-          <h3 className="text-base font-black text-white flex items-center gap-2">
-            <Award className="w-5 h-5 text-amber-400" /> Pre-Auction Signings &amp; Retentions
-          </h3>
-          {assignSuccess && (
-            <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
-              <CheckCircle className="w-3.5 h-3.5" /> Done!
-            </span>
-          )}
-        </div>
-
-        <p className="text-xs text-slate-400">
-          A franchise can retain up to 4 players or make 1 direct foreign signing. Costs are deducted directly from their initial 45 Cr purse.
-        </p>
-
-        <form onSubmit={handleAssignPlayer} className="space-y-3.5 text-xs">
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setAssignType("retention")}
-              className={`py-2 rounded-xl font-bold border transition-colors ${
-                assignType === "retention"
-                  ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
-                  : "bg-slate-950 text-slate-400 border-slate-800"
-              }`}
-            >
-              Player Retention (Max 4)
-            </button>
-            <button
-              type="button"
-              onClick={() => setAssignType("direct")}
-              className={`py-2 rounded-xl font-bold border transition-colors ${
-                assignType === "direct"
-                  ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
-                  : "bg-slate-950 text-slate-400 border-slate-800"
-              }`}
-            >
-              Direct Foreign Signing (Max 1)
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 text-xs">
+            {/* Room Name */}
             <div>
-              <label className="block text-slate-400 font-bold mb-1">Franchise</label>
-              <select
-                value={selectedFranchise}
-                onChange={(e) => setSelectedFranchise(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none"
-              >
-                {franchises.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name} ({formatPKR(f.remainingPurse)})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-slate-400 font-bold mb-1">Select Player</label>
-              <select
-                value={selectedPlayer}
-                onChange={(e) => {
-                  setSelectedPlayer(e.target.value);
-                  const p = players.find((pl) => pl.id === e.target.value);
-                  if (p) setAssignPrice(p.basePrice);
-                }}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none"
-              >
-                {upcomingPlayers.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({p.category})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-slate-400 font-bold mb-1">Deduction Amount (PKR)</label>
+              <label className="font-bold text-slate-700 block mb-1">Auction Room Name</label>
               <input
-                type="number"
-                step="500000"
-                value={assignPrice}
-                onChange={(e) => setAssignPrice(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-amber-400 font-mono focus:outline-none"
+                type="text"
+                value={roomName}
+                onChange={(e) => setRoomName(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-semibold text-slate-900 focus:outline-none focus:border-emerald-500"
               />
             </div>
+
+            {/* Room Passcode */}
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">Room Code</label>
+              <input
+                type="text"
+                value={roomCode}
+                onChange={(e) => setRoomCode(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono font-bold text-emerald-700 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            {/* Total Purse */}
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">Purse Per Team (PKR)</label>
+              <input
+                type="number"
+                value={totalPurse}
+                onChange={(e) => setTotalPurse(Number(e.target.value))}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono font-bold text-slate-900 focus:outline-none focus:border-emerald-500"
+              />
+              <span className="text-[10px] text-slate-400 mt-1 block">Standard: 450,000,000 (45 Crore)</span>
+            </div>
+
+            {/* Timer Seconds */}
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">Countdown Timer Per Bid (Seconds)</label>
+              <input
+                type="number"
+                value={timerSeconds}
+                onChange={(e) => setTimerSeconds(Number(e.target.value))}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-semibold text-slate-900 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            {/* Min / Max Squad */}
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">Squad Size Range (Min - Max)</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={minSquad}
+                  onChange={(e) => setMinSquad(Number(e.target.value))}
+                  className="w-1/2 px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-900"
+                />
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={maxSquad}
+                  onChange={(e) => setMaxSquad(Number(e.target.value))}
+                  className="w-1/2 px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-900"
+                />
+              </div>
+            </div>
+
+            {/* Occurrence Order */}
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">Player Occurrence Order</label>
+              <select
+                value={playerOccurrence}
+                onChange={(e) => setPlayerOccurrence(e.target.value as any)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-semibold text-slate-900"
+              >
+                <option value="sequential">Sequential List Order</option>
+                <option value="random">Random Draw from Pot</option>
+              </select>
+            </div>
+
+            {/* RTM Toggles */}
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+              <label className="font-bold text-slate-800 flex items-center justify-between">
+                <span>Enable Right To Match (RTM)</span>
+                <input
+                  type="checkbox"
+                  checked={enableRTM}
+                  onChange={(e) => setEnableRTM(e.target.checked)}
+                  className="w-4 h-4 text-emerald-600 rounded"
+                />
+              </label>
+              <div className="flex items-center justify-between text-slate-600 pt-1">
+                <span>RTM Cards Per Team:</span>
+                <input
+                  type="number"
+                  value={rtmCards}
+                  onChange={(e) => setRtmCards(Number(e.target.value))}
+                  className="w-16 px-2 py-1 rounded-lg border border-slate-300 text-center font-bold"
+                />
+              </div>
+            </div>
+
+            {/* Retentions & Trades Toggles */}
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+              <label className="font-bold text-slate-800 flex items-center justify-between">
+                <span>Allow Pre-Auction Retentions</span>
+                <input
+                  type="checkbox"
+                  checked={allowRetentions}
+                  onChange={(e) => setAllowRetentions(e.target.checked)}
+                  className="w-4 h-4 text-emerald-600 rounded"
+                />
+              </label>
+              <label className="font-bold text-slate-800 flex items-center justify-between pt-1">
+                <span>Enable Trade Desk</span>
+                <input
+                  type="checkbox"
+                  checked={allowTradesBefore}
+                  onChange={(e) => setAllowTradesBefore(e.target.checked)}
+                  className="w-4 h-4 text-emerald-600 rounded"
+                />
+              </label>
+            </div>
           </div>
 
-          <button
-            type="submit"
-            className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow"
-          >
-            Assign &amp; Deduct Budget
-          </button>
+          <div className="pt-4 border-t border-slate-100 flex justify-end">
+            <button
+              type="submit"
+              className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider transition-colors shadow-lg shadow-emerald-600/20"
+            >
+              Save &amp; Broadcast Rules
+            </button>
+          </div>
         </form>
-      </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB 3: SHAREABLE OWNER LINKS & REAL-TIME LOBBY           */}
+      {/* ======================================================== */}
+      {adminTab === "lobby" && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+            <h3 className="text-base font-black text-slate-900 mb-1">Franchise Owner &amp; Viewer Invite Links</h3>
+            <p className="text-xs text-slate-500 mb-4">
+              Share these links so owners can claim their teams and spectators can watch live.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-2">
+                <span className="font-black text-emerald-900 block uppercase tracking-wider text-[11px]">
+                  🏏 Franchise Owners Join Link
+                </span>
+                <p className="text-slate-600 text-[11px]">
+                  Franchise owners can click to claim their team (first-come first-serve) and enter their name.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={typeof window !== "undefined" ? `${window.location.origin}/join` : "/join"}
+                    className="w-full px-3 py-2 bg-white rounded-xl border border-emerald-300 font-mono text-[11px] text-slate-800"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(typeof window !== "undefined" ? `${window.location.origin}/join` : "/join", "owner-link")}
+                    className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl flex items-center gap-1 shrink-0"
+                  >
+                    {copiedKey === "owner-link" ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedKey === "owner-link" ? "Copied" : "Copy"}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                <span className="font-black text-slate-900 block uppercase tracking-wider text-[11px]">
+                  👁️ Public Spectator Stream Link
+                </span>
+                <p className="text-slate-600 text-[11px]">
+                  Fans and media can watch the live auction stream in read-only mode without bidding permissions.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={typeof window !== "undefined" ? `${window.location.origin}/auction?role=spectator` : "/auction?role=spectator"}
+                    className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 font-mono text-[11px] text-slate-800"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(typeof window !== "undefined" ? `${window.location.origin}/auction?role=spectator` : "/auction?role=spectator", "spec-link")}
+                    className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl flex items-center gap-1 shrink-0"
+                  >
+                    {copiedKey === "spec-link" ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedKey === "spec-link" ? "Copied" : "Copy"}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Real-time Franchise Owners Lobby Grid */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-base font-black text-slate-900">Franchise Ownership Lobby (8 Teams)</h3>
+                <p className="text-xs text-slate-500">Live overview of claimed and unassigned franchise seats.</p>
+              </div>
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                {franchises.filter(f => f.isClaimed).length} of 8 Teams Ready
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {franchises.map((f) => (
+                <div
+                  key={f.id}
+                  className={`p-3.5 rounded-2xl border flex items-center justify-between text-xs ${
+                    f.isClaimed
+                      ? "bg-emerald-50/60 border-emerald-300 text-slate-900"
+                      : "bg-slate-50 border-slate-200 text-slate-500"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 truncate">
+                    <span
+                      className="w-3 h-3 rounded-full shrink-0"
+                      style={{ backgroundColor: f.primaryColor }}
+                    />
+                    <div className="truncate">
+                      <p className="font-black text-slate-900 truncate">{f.name}</p>
+                      <p className="text-[11px] text-slate-500 truncate">
+                        {f.isClaimed ? `Owner: ${f.ownerName}` : "Unassigned seat"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full shrink-0 ${
+                    f.isClaimed ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-600"
+                  }`}>
+                    {f.isClaimed ? "READY" : "WAITING"}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-xs text-slate-500">
+                Once ready, click Start Auction to begin synchronized live bidding across all owner devices.
+              </span>
+              <button
+                onClick={startAuction}
+                className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider transition-colors shadow"
+              >
+                🚀 Start Live Auction Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB 4: LIVE AUCTION CONTROLS & OVERRIDES                 */}
+      {/* ======================================================== */}
+      {adminTab === "live" && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
+            <h3 className="text-base font-black text-slate-900">Admin Live Auction Controls</h3>
+            <p className="text-xs text-slate-500">Manual override actions to sell, mark unsold, pause, or skip players.</p>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => finalizePlayer(true)}
+                disabled={auctionStatus !== "Live"}
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors shadow disabled:opacity-40"
+              >
+                <CheckCircle className="w-4 h-4" />
+                <span>Hammer Down (Sell Player)</span>
+              </button>
+
+              <button
+                onClick={() => finalizePlayer(false)}
+                disabled={auctionStatus !== "Live"}
+                className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors shadow disabled:opacity-40"
+              >
+                <XCircle className="w-4 h-4" />
+                <span>Mark Unsold</span>
+              </button>
+
+              <button
+                onClick={goToNextPlayer}
+                className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase flex items-center gap-1.5 transition-colors"
+              >
+                <span>Next Player</span>
+                <SkipForward className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={goToPreviousPlayer}
+                className="px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors"
+                title="Previous player"
+              >
+                <SkipBack className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={shuffleUpcomingPlayers}
+                className="px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 hover:bg-amber-100 font-bold text-xs flex items-center gap-1.5 transition-colors"
+              >
+                <Shuffle className="w-4 h-4" />
+                <span>Shuffle Upcoming Draw</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Re-Auction Unsold Players */}
+          {unsoldPlayers.length > 0 && (
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-black text-slate-900">Re-Auction Unsold Players ({unsoldPlayers.length})</h3>
+                  <p className="text-xs text-slate-500">Put unsold players back onto the auction block with an optional discount.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-600 font-bold">Discount:</span>
+                  <select
+                    value={reAuctionDiscount}
+                    onChange={(e) => setReAuctionDiscount(Number(e.target.value))}
+                    className="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800"
+                  >
+                    <option value={0}>0% (Same Base Price)</option>
+                    <option value={10}>10% Discount</option>
+                    <option value={20}>20% Discount</option>
+                    <option value={25}>25% Discount</option>
+                  </select>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  reEnterUnsoldPlayers([], reAuctionDiscount);
+                  setReAuctionSuccess(`Re-entered ${unsoldPlayers.length} unsold players into Round 2 with ${reAuctionDiscount}% discount!`);
+                  setTimeout(() => setReAuctionSuccess(null), 4000);
+                }}
+                className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-colors shadow"
+              >
+                🔄 Re-Enter All {unsoldPlayers.length} Unsold Players into Auction
+              </button>
+
+              {reAuctionSuccess && (
+                <p className="text-xs text-emerald-700 font-bold">{reAuctionSuccess}</p>
+              )}
+            </div>
+          )}
+
+          {/* Emergency Reset Auction Button */}
+          <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-between">
+            <div>
+              <h4 className="text-xs font-black text-red-900 uppercase">Emergency Reset Auction</h4>
+              <p className="text-[11px] text-red-700">Wipes all sales, resets all purses to starting 45 Cr, and returns to Player 1.</p>
+            </div>
+            <button
+              onClick={() => {
+                if (window.confirm("Are you sure you want to completely RESET the auction? All sales and purses will be reset to 0!")) {
+                  resetAuction();
+                }
+              }}
+              className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase transition-colors shadow"
+            >
+              Reset Auction
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB 5: TRADE DESK APPROVALS                              */}
+      {/* ======================================================== */}
+      {adminTab === "trades" && (
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
+          <h3 className="text-base font-black text-slate-900">Franchise Trade Desk Approvals</h3>
+          <p className="text-xs text-slate-500">Review, approve, or reject player trades submitted between franchises.</p>
+
+          {tradeOffers.length === 0 ? (
+            <p className="text-center text-xs text-slate-400 py-8">No trade proposals have been submitted yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {tradeOffers.map((trade) => {
+                const fromTeam = franchises.find(f => f.id === trade.fromFranchiseId);
+                const toTeam = franchises.find(f => f.id === trade.toFranchiseId);
+                const offeredPlayer = players.find(p => p.id === trade.offeredPlayerId);
+                const requestedPlayer = players.find(p => p.id === trade.requestedPlayerId);
+
+                return (
+                  <div key={trade.id} className="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-between text-xs">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <strong className="text-slate-900">{fromTeam?.name}</strong>
+                        <span className="text-slate-400">⇄</span>
+                        <strong className="text-slate-900">{toTeam?.name}</strong>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          trade.status === 'approved_by_admin' ? 'bg-emerald-100 text-emerald-800' :
+                          trade.status === 'accepted' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600'
+                        }`}>
+                          {trade.status.toUpperCase()}
+                        </span>
+                      </div>
+                      <p className="text-slate-600 text-[11px]">
+                        Offered: {offeredPlayer ? offeredPlayer.name : "Cash only"} {trade.offeredCash ? `+ ${formatPKR(trade.offeredCash)}` : ""}
+                        {" | "}
+                        Requested: {requestedPlayer ? requestedPlayer.name : "Cash only"} {trade.requestedCash ? `+ ${formatPKR(trade.requestedCash)}` : ""}
+                      </p>
+                    </div>
+
+                    {trade.status === 'accepted' && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleTradeAction(trade.id, 'admin_approve')}
+                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+                        >
+                          Approve Trade
+                        </button>
+                        <button
+                          onClick={() => handleTradeAction(trade.id, 'reject')}
+                          className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB 6: REPORTS & DOWNLOADS                               */}
+      {/* ======================================================== */}
+      {adminTab === "reports" && (
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-6">
+          <h3 className="text-base font-black text-slate-900">Auction Reports &amp; Downloads</h3>
+          <p className="text-xs text-slate-500">Download formatted Excel spreadsheets and CSV rosters.</p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-3 text-xs">
+              <FileSpreadsheet className="w-8 h-8 text-emerald-600" />
+              <h4 className="font-bold text-slate-900">Complete Master Excel Workbook</h4>
+              <p className="text-slate-600 text-[11px]">Includes Franchise Summary, All Players with Prices, Team Squads, and Event Audit logs.</p>
+              <button
+                onClick={() => exportAuctionToExcel(franchises, players, eventLogs, settings.name)}
+                className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-colors shadow"
+              >
+                📥 Download Excel Workbook
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
+              <Download className="w-8 h-8 text-slate-700" />
+              <h4 className="font-bold text-slate-900">Player List CSV (Per Team)</h4>
+              <p className="text-slate-600 text-[11px]">Download all players with base prices, sold prices, status, and buying franchise.</p>
+              <button
+                onClick={() => exportPlayersToCsv(players, franchises)}
+                className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition-colors"
+              >
+                📥 Download Players CSV
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-3 text-xs">
+              <Download className="w-8 h-8 text-amber-700" />
+              <h4 className="font-bold text-slate-900">Team Squads Rosters CSV</h4>
+              <p className="text-slate-600 text-[11px]">Download each franchise's squad roster with player names, categories, roles, and prices paid.</p>
+              <button
+                onClick={() => exportSquadsToCsv(franchises, players)}
+                className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold transition-colors shadow"
+              >
+                📥 Download Squads CSV
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

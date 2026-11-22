@@ -193,3 +193,111 @@ export function generateAuctionPDF(
   doc.save(`${auctionTitle.replace(/\s+/g, "_")}.pdf`);
 }
 
+/**
+ * Generate 1-Click WhatsApp Share Link for a Sold Player
+ */
+export function getWhatsAppShareUrl(
+  playerName: string,
+  franchiseName: string,
+  soldPrice: number,
+  category: string,
+  rtmUsed?: boolean
+): string {
+  const priceFormatted = formatPKR(soldPrice);
+  const text = encodeURIComponent(
+    `🏏 *HBL PSL 12 Live Player Auction Announcement*\n\n` +
+    `⭐ *${playerName}* (${category}) has been *SOLD* to *${franchiseName}*!\n` +
+    `💰 Winning Bid: *${priceFormatted}*\n` +
+    `⚡ Right to Match (RTM) Used: *${rtmUsed ? "YES" : "NO"}*\n\n` +
+    `🔴 View live auction room: ${typeof window !== "undefined" ? window.location.origin + "/auction?role=spectator" : "https://psl-mock-auction.vercel.app/auction"}`
+  );
+  return `https://api.whatsapp.com/send?text=${text}`;
+}
+
+/**
+ * Export all players with base price & sold price to CSV
+ */
+export function exportPlayersToCsv(players: Player[], franchises: Franchise[]) {
+  const headers = ["Player ID", "Name", "Category", "Role", "Nationality", "Overseas", "Base Price", "Sold Price", "Status", "Team Sold To", "RTM Used"];
+  const rows = players.map((p) => {
+    const f = franchises.find((t) => t.id === p.soldToFranchiseId);
+    return [
+      p.id,
+      `"${p.name.replace(/"/g, '""')}"`,
+      p.category,
+      p.primaryRole,
+      p.nationality,
+      p.isOverseas ? "Yes" : "No",
+      p.basePrice,
+      p.soldPrice || 0,
+      p.status.toUpperCase(),
+      `"${(f ? f.name : "N/A").replace(/"/g, '""')}"`,
+      p.wasRtmUsed ? "Yes" : "No",
+    ];
+  });
+
+  const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `PSL_12_Players_List_${Date.now()}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+/**
+ * Export all team squads to CSV
+ */
+export function exportSquadsToCsv(franchises: Franchise[], players: Player[]) {
+  const headers = ["Franchise", "Owner", "Remaining Purse", "Player No", "Player Name", "Category", "Role", "Nationality", "Overseas", "Price Paid", "Acquisition"];
+  const rows: string[] = [];
+
+  franchises.forEach((f) => {
+    const squad = players.filter((p) => p.soldToFranchiseId === f.id);
+    if (squad.length === 0) {
+      rows.push([
+        `"${f.name}"`,
+        `"${f.ownerName || "Unassigned"}"`,
+        f.remainingPurse,
+        0,
+        "No players acquired yet",
+        "-",
+        "-",
+        "-",
+        "-",
+        0,
+        "-",
+      ].join(","));
+    } else {
+      squad.forEach((p, idx) => {
+        rows.push([
+          `"${f.name}"`,
+          `"${f.ownerName || "Unassigned"}"`,
+          f.remainingPurse,
+          idx + 1,
+          `"${p.name.replace(/"/g, '""')}"`,
+          p.category,
+          p.primaryRole,
+          p.nationality,
+          p.isOverseas ? "Yes" : "No",
+          p.soldPrice || p.basePrice,
+          p.isRetained ? "Retained" : p.isDirectSigning ? "Direct Signing" : "Auction Buy",
+        ].join(","));
+      });
+    }
+  });
+
+  const csvContent = [headers.join(","), ...rows].join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `PSL_12_Team_Squads_${Date.now()}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+

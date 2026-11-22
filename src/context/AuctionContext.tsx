@@ -14,6 +14,8 @@ import {
   RulePreset,
   RtmState,
   PlayerRole,
+  AdminUser,
+  AuctionMessage,
 } from "@/types/auction";
 import { INITIAL_FRANCHISES } from "@/data/initialFranchises";
 import { INITIAL_PLAYERS } from "@/data/initialPlayers";
@@ -103,6 +105,21 @@ interface AuctionContextType {
   toggleBotBidding: () => void;
   botBiddingEnabled: boolean;
   isCloudConnected: boolean;
+
+  // First-Come-First-Serve Team Selection & Owner Identity
+  claimFranchise: (franchiseId: string, ownerName: string) => { success: boolean; message: string };
+  releaseFranchise: (franchiseId: string) => void;
+
+  // Real-time Chat Channels
+  messages: AuctionMessage[];
+  sendMessage: (channel: 'owners' | 'spectators', text: string) => void;
+
+  // Admin Account & Sign-up
+  adminUser: AdminUser | null;
+  signupAdmin: (email: string, password: string, name: string) => { success: boolean; message: string };
+
+  // Live Player addition during auction
+  addNewPlayerDuringAuction: (player: Partial<Player>) => void;
 }
 
 const DEFAULT_SETTINGS: AuctionSettings = {
@@ -136,6 +153,11 @@ const DEFAULT_SETTINGS: AuctionSettings = {
   scheduledStartTime: "",
   botBiddingEnabled: true,
   manualFranchiseId: "iu",
+  allowRetentions: true,
+  allowTradesBeforeAuction: true,
+  allowTradesAfterAuction: true,
+  reEnterUnsoldRule: "all",
+  unsoldDiscountPercent: 0,
 };
 
 const STORAGE_KEY = "psl_12_mock_auction_state_v2";
@@ -165,6 +187,27 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [eventLogs, setEventLogs] = useState<AuctionEventLog[]>([]);
   const [rtmState, setRtmState] = useState<RtmState | null>(null);
   const [isCloudConnected, setIsCloudConnected] = useState<boolean>(false);
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
+  const [messages, setMessages] = useState<AuctionMessage[]>([
+    {
+      id: "msg-init-1",
+      senderId: "system",
+      senderName: "PSL Control Room",
+      senderRole: "admin",
+      channel: "owners",
+      text: "Welcome to HBL PSL 12 Live Franchise War Room! All official trades, retentions, and strategy discussions take place here.",
+      timestamp: Date.now() - 60000,
+    },
+    {
+      id: "msg-init-2",
+      senderId: "system",
+      senderName: "HBL Broadcast Feed",
+      senderRole: "spectator",
+      channel: "spectators",
+      text: "Welcome cricket fans to the HBL PSL 12 Live Virtual Player Auction broadcast! Track all bids, player sales, and franchise squad compositions in real-time.",
+      timestamp: Date.now() - 60000,
+    },
+  ]);
 
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
   const supabaseChannelRef = useRef<RealtimeChannel | null>(null);
@@ -192,6 +235,8 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (syncData.tradeOffers) setTradeOffers(syncData.tradeOffers as TradeOffer[]);
     if (syncData.eventLogs) setEventLogs(syncData.eventLogs as AuctionEventLog[]);
     if ("rtmState" in syncData) setRtmState(syncData.rtmState as RtmState | null);
+    if (syncData.messages) setMessages(syncData.messages as AuctionMessage[]);
+    if (syncData.adminUser) setAdminUser(syncData.adminUser as AdminUser);
   }, []);
 
   // Broadcast function to local tabs AND global Supabase Realtime channel
@@ -231,6 +276,8 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         timer,
         timerExpiresAt,
         isTimerRunning,
+        messages,
+        adminUser,
       };
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
@@ -262,6 +309,8 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     timer,
     timerExpiresAt,
     isTimerRunning,
+    messages,
+    adminUser,
   ]);
 
   useEffect(() => {
@@ -507,7 +556,134 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       addLog("admin", "Super Administrator logged in.");
       return { success: true, message: "Welcome Super Administrator! Auction control unlocked." };
     }
-    return { success: false, message: "Invalid Admin password. (Hint: default is admin123)" };
+    return { success: false, message: "Invalid Admin password. (Hint: default is admin123 or psl2027)" };
+  };
+
+  const signupAdmin = (email: string, pass: string, name: string) => {
+    if (!email || !pass || !name) {
+      return { success: false, message: "All fields are required." };
+    }
+    const newAdmin: AdminUser = {
+      id: `admin-${Date.now()}`,
+      email: email.trim(),
+      name: name.trim(),
+      createdAt: Date.now(),
+    };
+    setAdminUser(newAdmin);
+    setRole("admin");
+    setAuthenticatedFranchiseId(null);
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem(
+          AUTH_SESSION_KEY,
+          JSON.stringify({ role: "admin", authenticatedFranchiseId: null, adminUser: newAdmin })
+        );
+      } catch {}
+    }
+    broadcastSync({ adminUser: newAdmin });
+    addLog("admin", `Admin registered: ${name} (${email})`);
+    return { success: true, message: `Admin account created! Welcome ${name}.` };
+  };
+
+  const claimFranchise = (franchiseId: string, ownerName: string) => {
+    const f = franchises.find((t) => t.id === franchiseId);
+    if (!f) return { success: false, message: "Franchise not found." };
+    if (f.isClaimed && f.ownerName && f.ownerName.toLowerCase() !== ownerName.toLowerCase()) {
+      return { success: false, message: `${f.name} is already claimed by ${f.ownerName}!` };
+    }
+
+    const updatedFranchises = franchises.map((team) =>
+      team.id === franchiseId
+        ? {
+            ...team,
+            isClaimed: true,
+            ownerName: ownerName.trim() || team.ownerName,
+            claimedByUserId: `user-${ownerName.toLowerCase().replace(/\s+/g, "_")}`,
+          }
+        : team
+    );
+
+    setFranchises(updatedFranchises);
+    setRole("team_owner");
+    setAuthenticatedFranchiseId(franchiseId);
+
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem(
+          AUTH_SESSION_KEY,
+          JSON.stringify({ role: "team_owner", authenticatedFranchiseId: franchiseId, ownerName })
+        );
+      } catch {}
+    }
+
+    broadcastSync({ franchises: updatedFranchises });
+    addLog("admin", `${ownerName} claimed ownership of ${f.name}.`);
+    return { success: true, message: `Successfully claimed ${f.name} as ${ownerName}!` };
+  };
+
+  const releaseFranchise = (franchiseId: string) => {
+    const updatedFranchises = franchises.map((team) =>
+      team.id === franchiseId
+        ? { ...team, isClaimed: false, ownerName: "" }
+        : team
+    );
+    setFranchises(updatedFranchises);
+    broadcastSync({ franchises: updatedFranchises });
+  };
+
+  const sendMessage = (channel: "owners" | "spectators", text: string) => {
+    if (!text.trim()) return;
+    const currentTeam = franchises.find((f) => f.id === authenticatedFranchiseId);
+    const newMsg: AuctionMessage = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      senderId: role === "admin" ? "admin" : (currentTeam?.id || "spectator"),
+      senderName: role === "admin" ? (adminUser?.name || "Super Admin") : (currentTeam ? `${currentTeam.name} (${currentTeam.ownerName || "Owner"})` : "Fan / Spectator"),
+      senderRole: role,
+      franchiseId: currentTeam?.id,
+      franchiseName: currentTeam?.name,
+      channel,
+      text: text.trim(),
+      timestamp: Date.now(),
+    };
+    const updatedMessages = [...messages, newMsg];
+    setMessages(updatedMessages);
+    broadcastSync({ messages: updatedMessages });
+  };
+
+  const addNewPlayerDuringAuction = (newPlayerData: Partial<Player>) => {
+    const id = `p-live-${Date.now()}`;
+    const newPlayer: Player = {
+      id,
+      name: newPlayerData.name || "Custom Player",
+      photoUrl: newPlayerData.photoUrl || "https://images.icc-cricket.com/image/upload/t_player-headshot-portrait-lg-webp/prd/assets/players/generic/colored/69957.png",
+      nationality: newPlayerData.nationality || "Pakistan",
+      isOverseas: Boolean(newPlayerData.isOverseas),
+      age: newPlayerData.age || 25,
+      battingStyle: newPlayerData.battingStyle || "Right-hand bat",
+      bowlingStyle: newPlayerData.bowlingStyle || "Right-arm medium",
+      primaryRole: newPlayerData.primaryRole || "All-Rounder",
+      category: newPlayerData.category || "Silver",
+      basePrice: newPlayerData.basePrice || 7000000,
+      currentPrice: newPlayerData.basePrice || 7000000,
+      status: "upcoming",
+      auctionRound: 1,
+      stats: newPlayerData.stats || {
+        matches: 20,
+        runs: 350,
+        battingAverage: 25.0,
+        strikeRate: 130.0,
+        wickets: 15,
+        economyRate: 8.2,
+      },
+      hasPlayedPSL: true,
+      statsType: "T20",
+      cricinfoUrl: `https://www.espncricinfo.com/cricketers/${(newPlayerData.name || "").toLowerCase().replace(/\s+/g, "-")}`,
+    };
+
+    const updatedPlayers = [...players, newPlayer];
+    setPlayers(updatedPlayers);
+    broadcastSync({ players: updatedPlayers });
+    addLog("admin", `Admin added new player to auction pool: ${newPlayer.name} (${newPlayer.category})`);
   };
 
   const loginAsTeamOwner = (passkey: string, roomCode?: string) => {
@@ -703,6 +879,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
             soldToFranchiseId: soldToFranchiseId,
             soldPrice: soldPrice,
             currentPrice: soldPrice,
+            wasRtmUsed: Boolean(isRtmSale),
           };
         }
         return p;
@@ -2018,6 +2195,13 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         toggleBotBidding,
         botBiddingEnabled: settings.botBiddingEnabled !== false,
         isCloudConnected,
+        claimFranchise,
+        releaseFranchise,
+        messages,
+        sendMessage,
+        adminUser,
+        signupAdmin,
+        addNewPlayerDuringAuction,
       }}
     >
       {children}

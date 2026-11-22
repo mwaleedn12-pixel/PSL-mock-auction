@@ -10,17 +10,14 @@ import { formatPKR } from "@/lib/rules";
 import {
   Gavel,
   Shield,
-  Users,
-  Database,
-  BarChart3,
   Sliders,
   Crown,
   Eye,
   LogIn,
   Key,
   Cloud,
-  CloudOff,
   RefreshCw,
+  UserCheck,
 } from "lucide-react";
 
 export const Navbar: React.FC = () => {
@@ -32,81 +29,96 @@ export const Navbar: React.FC = () => {
     currentPlayer,
     highestBid,
     timer,
-    settings,
     isCloudConnected,
   } = useAuction();
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
-  // Simplified and merged main hubs (as requested by user)
   const navLinks = [
-    { href: "/auction", label: "Live Arena", icon: Gavel },
-    { href: "/squads", label: "Squads & Teams", icon: Shield },
-    { href: "/players", label: "Player Centre", icon: Database },
-    { href: "/analytics", label: "Reports & Stats", icon: BarChart3 },
-    ...(role === "admin"
-      ? [{ href: "/admin", label: "Admin Room", icon: Sliders }]
-      : []),
+    { href: "/auction", label: "Live Auction", icon: Gavel },
+    { href: "/join", label: "Select Team", icon: Shield },
+    { href: "/admin", label: "Admin Room", icon: Sliders },
   ];
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-emerald-950/80 shadow-2xl">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-3">
-            {/* Brand Logo & Preset Tag */}
-            <Link href="/" className="flex items-center gap-3 group shrink-0">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 via-teal-600 to-amber-500 p-[2px] shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-                <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center font-black text-emerald-400 text-lg tracking-wider">
-                  PSL
-                </div>
+            {/* Brand Logo - Official HBL PSL Branding */}
+            <Link href="/auction" className="flex items-center gap-2.5 group shrink-0">
+              <div className="w-10 h-10 rounded-xl overflow-hidden border border-emerald-500/30 shadow-sm group-hover:scale-105 transition-transform bg-emerald-950 flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/psl-brand.jpg"
+                  alt="HBL PSL"
+                  className="w-full h-full object-cover object-center"
+                />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-white text-base tracking-tight">
-                    PSL <span className="text-amber-400">Mock Auction</span>
-                  </span>
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                    {settings.rulePreset === "PSL11" ? "PSL 11 Rules" : "PSL 12 Framework"}
+                <div className="flex items-center gap-1.5">
+                  <span className="font-black text-slate-900 text-base tracking-tight">
+                    HBL PSL 12 <span className="text-emerald-600 font-extrabold">Auction</span>
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400 hidden sm:block">Automated Multi-Franchise Auction Manager</p>
               </div>
             </Link>
 
+            {/* Navigation Links */}
+            <nav className="hidden md:flex items-center gap-1">
+              {navLinks.map((link) => {
+                const Icon = link.icon;
+                const isActive = pathname === link.href;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black transition-colors ${
+                      isActive
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{link.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+
             {/* Live Ticker preview if live */}
             {currentPlayer && auctionStatus === "Live" && (
-              <div className="hidden lg:flex items-center gap-3 bg-slate-900/90 border border-slate-800 rounded-full px-4 py-1.5 shadow-inner text-xs">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
-                <span className="text-slate-400">On Block:</span>
-                <span className="font-bold text-emerald-400">{currentPlayer.name}</span>
-                <span className="text-slate-500">|</span>
-                <span className="text-amber-400 font-bold font-mono">
+              <div className="hidden lg:flex items-center gap-2.5 bg-emerald-50 border border-emerald-200 rounded-full px-3.5 py-1 text-xs">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                <span className="text-slate-500 text-[11px]">On Block:</span>
+                <span className="font-black text-slate-900">{currentPlayer.name}</span>
+                <span className="text-slate-300">|</span>
+                <span className="text-emerald-700 font-black font-mono">
                   {highestBid ? formatPKR(highestBid.amount) : formatPKR(currentPlayer.basePrice)}
                 </span>
-                <span className="bg-red-500/20 text-red-400 font-mono font-bold px-1.5 py-0.2 rounded text-[11px]">
+                <span className="bg-red-100 text-red-700 font-mono font-black px-1.5 py-0.2 rounded text-[11px]">
                   {timer}s
                 </span>
               </div>
             )}
 
-            {/* Right Side: Role Badge, Login Trigger, Audio */}
+            {/* Right Side: Cloud Pill, Role Pill, Audio */}
             <div className="flex items-center gap-2 sm:gap-3">
               {/* Cloud Sync Status Pill */}
               {isCloudConnected ? (
                 <div
-                  className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 text-[11px] font-bold shadow-sm shadow-cyan-500/10"
-                  title="Connected to Supabase Realtime Cloud: All devices and tabs synchronized live"
+                  className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-50 border border-cyan-300 text-cyan-800 text-[11px] font-black shadow-sm"
+                  title="Connected to Supabase Realtime Cloud (Synchronized across all internet devices)"
                 >
-                  <Cloud className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                  <Cloud className="w-3.5 h-3.5 text-cyan-600 animate-pulse" />
                   <span>Supabase Live</span>
                 </div>
               ) : (
                 <div
-                  className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-400 text-[10px] font-medium"
-                  title="Local cross-tab synchronization active. Add Supabase keys to Vercel for global multi-device sync."
+                  className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-[10px] font-bold"
+                  title="Local cross-tab synchronization active. Add Supabase keys to Vercel for global sync."
                 >
-                  <RefreshCw className="w-3 h-3 text-slate-400" />
+                  <RefreshCw className="w-3 h-3 text-slate-500" />
                   <span>Local Sync</span>
                 </div>
               )}
@@ -114,63 +126,43 @@ export const Navbar: React.FC = () => {
               {/* Role Indicator Button -> Opens Auth Modal */}
               <button
                 onClick={() => setIsAuthModalOpen(true)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-black border transition-all ${
                   role === "admin"
-                    ? "bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-sm shadow-amber-500/10"
+                    ? "bg-amber-50 text-amber-900 border-amber-300 shadow-sm"
                     : role === "team_owner" && activeFranchise
-                    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-sm shadow-emerald-500/10"
-                    : "bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-700"
+                    ? "bg-emerald-50 text-emerald-900 border-emerald-300 shadow-sm"
+                    : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
                 }`}
               >
                 {role === "admin" ? (
-                  <Crown className="w-3.5 h-3.5 text-amber-400" />
-                ) : role === "team_owner" ? (
-                  <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                  <Crown className="w-3.5 h-3.5 text-amber-600" />
+                ) : role === "team_owner" && activeFranchise ? (
+                  <div
+                    className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] text-white font-black"
+                    style={{ backgroundColor: activeFranchise.primaryColor }}
+                  >
+                    {activeFranchise.shortName.substring(0, 2)}
+                  </div>
                 ) : (
-                  <Eye className="w-3.5 h-3.5 text-slate-400" />
+                  <Eye className="w-3.5 h-3.5 text-slate-500" />
                 )}
                 <span>
                   {role === "admin"
-                    ? "Super Admin"
+                    ? "👑 Admin"
                     : role === "team_owner" && activeFranchise
-                    ? `${activeFranchise.shortName} Owner`
-                    : "Spectator (Public)"}
+                    ? `${activeFranchise.shortName} (${activeFranchise.ownerName || "Owner"})`
+                    : "Viewer"}
                 </span>
-                <span className="text-[10px] opacity-60">| Switch</span>
               </button>
 
-              {/* Audio Toggle */}
+              {/* Audio Sound Toggle */}
               <AudioToggle />
             </div>
           </div>
         </div>
-
-        {/* Streamlined Main Hubs Bar (4 clean sections) */}
-        <nav className="border-t border-slate-800/80 bg-slate-950/70 overflow-x-auto no-scrollbar">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-1 sm:gap-3 py-1.5">
-            {navLinks.map((link) => {
-              const Icon = link.icon;
-              const isActive = pathname === link.href;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-                    isActive
-                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-sm shadow-emerald-500/10"
-                      : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/60"
-                  }`}
-                >
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? "text-emerald-400" : "text-slate-400"}`} />
-                  <span>{link.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </nav>
       </header>
 
-      {/* Auth Modal */}
+      {/* Role / Authentication Modal */}
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </>
   );

@@ -32,7 +32,7 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ compact = false 
               r={radius}
               stroke="currentColor"
               strokeWidth="5"
-              className="text-slate-800"
+              className="text-slate-200"
               fill="transparent"
             />
             <circle
@@ -48,10 +48,10 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ compact = false 
                 isUrgent
                   ? "text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]"
                   : isWarning
-                  ? "text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]"
+                  ? "text-amber-500 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]"
                   : isTimerRunning
-                  ? "text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.5)]"
-                  : "text-slate-600"
+                  ? "text-emerald-500 drop-shadow-[0_0_6px_rgba(16,185,129,0.5)]"
+                  : "text-slate-300"
               }`}
               fill="transparent"
             />
@@ -60,17 +60,17 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ compact = false 
             <span
               className={`font-mono font-black text-sm leading-none ${
                 isUrgent
-                  ? "text-red-400 animate-pulse"
+                  ? "text-red-600 animate-pulse"
                   : isWarning
-                  ? "text-amber-400"
+                  ? "text-amber-600"
                   : isTimerRunning
-                  ? "text-white"
-                  : "text-slate-500"
+                  ? "text-slate-900"
+                  : "text-slate-400"
               }`}
             >
               {timer}s
             </span>
-            <span className="text-[8px] font-bold text-slate-500 uppercase">clock</span>
+            <span className="text-[8px] font-bold text-slate-400 uppercase">clock</span>
           </div>
         </div>
       </div>
@@ -79,51 +79,40 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ compact = false 
 
   return (
     <div
-      className={`relative overflow-hidden p-5 rounded-3xl border transition-all duration-300 shadow-2xl ${
+      className={`relative overflow-hidden p-5 rounded-3xl border transition-all duration-300 shadow-sm ${
         isUrgent
-          ? "bg-red-950/50 border-red-500 shadow-red-500/30 animate-shake"
+          ? "bg-red-50 border-red-300 shadow-red-500/10 animate-shake"
           : isWarning
-          ? "bg-amber-950/40 border-amber-500/70 shadow-amber-500/20"
+          ? "bg-amber-50 border-amber-300 shadow-amber-500/10"
           : isTimerRunning
-          ? "bg-slate-900/90 border-emerald-500/40 shadow-emerald-500/10"
-          : "bg-slate-900/60 border-slate-800"
+          ? "bg-white border-emerald-300 shadow-emerald-500/10"
+          : "bg-white border-slate-200"
       }`}
     >
-      {/* Background Glow */}
-      <div
-        className={`absolute -top-12 -right-12 w-36 h-36 rounded-full blur-2xl pointer-events-none transition-colors duration-500 ${
-          isUrgent
-            ? "bg-red-500/30"
-            : isTimerRunning
-            ? "bg-emerald-500/15"
-            : "bg-slate-700/10"
-        }`}
-      />
-
       <div className="flex items-center justify-between relative z-10">
         <div className="flex items-center gap-2">
           <div
             className={`p-2 rounded-xl border ${
               isUrgent
-                ? "bg-red-500/20 border-red-500/40 text-red-400 animate-pulse"
+                ? "bg-red-100 border-red-300 text-red-600 animate-pulse"
                 : isTimerRunning
-                ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
-                : "bg-slate-800 border-slate-700 text-slate-400"
+                ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                : "bg-slate-100 border-slate-200 text-slate-500"
             }`}
           >
             <Clock className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 block">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 block">
               Official Auction Clock
             </span>
             <span
               className={`text-xs font-bold ${
                 isUrgent
-                  ? "text-red-400 animate-pulse"
+                  ? "text-red-600 animate-pulse"
                   : isTimerRunning
-                  ? "text-emerald-400"
-                  : "text-amber-400"
+                  ? "text-emerald-700"
+                  : "text-amber-700"
               }`}
             >
               {auctionStatus === "Live"
@@ -151,7 +140,7 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ compact = false 
               r={radius}
               stroke="currentColor"
               strokeWidth="6"
-              className="text-slate-800"
+              className="text-slate-100"
               fill="transparent"
             />
             {/* Animated Progress Circle */}
@@ -168,10 +157,10 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ compact = false 
                 isUrgent
                   ? "text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]"
                   : isWarning
-                  ? "text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]"
+                  ? "text-amber-500 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]"
                   : isTimerRunning
-                  ? "text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.5)]"
-                  : "text-slate-600"
+                  ? "text-emerald-600 drop-shadow-[0_0_6px_rgba(5,150,105,0.5)]"
+                  : "text-slate-300"
               }`}
               fill="transparent"
             />
@@ -182,23 +171,23 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ compact = false 
             <span
               className={`font-mono font-black text-2xl tracking-tighter leading-none ${
                 isUrgent
-                  ? "text-red-400 scale-110"
+                  ? "text-red-600 scale-110"
                   : isWarning
-                  ? "text-amber-400"
+                  ? "text-amber-600"
                   : isTimerRunning
-                  ? "text-white"
-                  : "text-slate-500"
+                  ? "text-slate-900"
+                  : "text-slate-400"
               }`}
             >
               {timer.toString().padStart(2, "0")}
             </span>
-            <span className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">sec</span>
+            <span className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">sec</span>
           </div>
         </div>
       </div>
 
       {/* Dynamic Linear Bar */}
-      <div className="w-full bg-slate-950/80 h-2 rounded-full overflow-hidden mt-4 border border-slate-800/80">
+      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mt-4 border border-slate-200">
         <div
           className={`h-full transition-all duration-1000 ease-linear rounded-full ${
             isUrgent
@@ -212,10 +201,10 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ compact = false 
       </div>
 
       {/* Footer Status Indicators */}
-      <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 font-medium">
+      <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 font-medium">
         <span>Reset Rule: +15s on bid, +10s in last 5s</span>
         {isUrgent && (
-          <span className="text-red-400 font-black flex items-center gap-1 animate-bounce">
+          <span className="text-red-600 font-black flex items-center gap-1 animate-bounce">
             <AlertTriangle className="w-3.5 h-3.5" /> Going Once...
           </span>
         )}
