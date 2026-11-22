@@ -384,7 +384,7 @@ export default function LiveAuctionArenaPage() {
               {themeMode === "broadcast_dark" ? <Sun className="w-3.5 h-3.5 text-amber-500" /> : <Moon className="w-3.5 h-3.5 text-slate-700" />}
             </button>
             <Link
-              href="/join"
+              href="/"
               className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase transition-colors shadow"
             >
               Claim a Team to Bid →

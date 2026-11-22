@@ -354,8 +354,9 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setAuthenticatedFranchiseId(parsedAuth.authenticatedFranchiseId);
           }
         } else {
-          setRole("team_owner");
-          setAuthenticatedFranchiseId("iu");
+          // No saved session — start as spectator, user must choose role from landing page
+          setRole("spectator");
+          setAuthenticatedFranchiseId(null);
         }
       } catch {}
 

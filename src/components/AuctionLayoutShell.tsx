@@ -1,12 +1,21 @@
 "use client";
 
 import React from "react";
+import { usePathname } from "next/navigation";
 import { useAuction } from "@/context/AuctionContext";
 import { Navbar } from "./Navbar";
 
 export const AuctionLayoutShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { themeMode } = useAuction();
+  const pathname = usePathname();
   const isDark = themeMode === "broadcast_dark";
+
+  // Landing page gets fullscreen treatment — no navbar/footer
+  const isLandingPage = pathname === "/";
+
+  if (isLandingPage) {
+    return <>{children}</>;
+  }
 
   return (
     <div
