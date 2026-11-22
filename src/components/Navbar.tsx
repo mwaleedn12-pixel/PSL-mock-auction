@@ -18,6 +18,9 @@ import {
   Eye,
   LogIn,
   Key,
+  Cloud,
+  CloudOff,
+  RefreshCw,
 } from "lucide-react";
 
 export const Navbar: React.FC = () => {
@@ -30,6 +33,7 @@ export const Navbar: React.FC = () => {
     highestBid,
     timer,
     settings,
+    isCloudConnected,
   } = useAuction();
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -88,6 +92,25 @@ export const Navbar: React.FC = () => {
 
             {/* Right Side: Role Badge, Login Trigger, Audio */}
             <div className="flex items-center gap-2 sm:gap-3">
+              {/* Cloud Sync Status Pill */}
+              {isCloudConnected ? (
+                <div
+                  className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 text-[11px] font-bold shadow-sm shadow-cyan-500/10"
+                  title="Connected to Supabase Realtime Cloud: All devices and tabs synchronized live"
+                >
+                  <Cloud className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                  <span>Supabase Live</span>
+                </div>
+              ) : (
+                <div
+                  className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-400 text-[10px] font-medium"
+                  title="Local cross-tab synchronization active. Add Supabase keys to Vercel for global multi-device sync."
+                >
+                  <RefreshCw className="w-3 h-3 text-slate-400" />
+                  <span>Local Sync</span>
+                </div>
+              )}
+
               {/* Role Indicator Button -> Opens Auth Modal */}
               <button
                 onClick={() => setIsAuthModalOpen(true)}

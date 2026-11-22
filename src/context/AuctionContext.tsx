@@ -21,6 +21,16 @@ import { PSL_11_SQUADS, Psl11SquadPlayer } from "@/data/psl11Squads";
 import { soundEngine } from "@/lib/audio";
 import { validateBid, getNextMinimumIncrement } from "@/lib/rules";
 import confetti from "canvas-confetti";
+import {
+  getSupabase,
+  isSupabaseConfigured,
+  fetchRemoteAuctionState,
+  saveRemoteAuctionState,
+  broadcastSupabaseEvent,
+  recordSupabaseBid,
+  DEFAULT_ROOM_ID,
+} from "@/lib/supabase";
+import { RealtimeChannel } from "@supabase/supabase-js";
 
 interface AuctionContextType {
   // Authentication & RBAC (3 Roles: admin, team_owner, spectator)
@@ -92,6 +102,7 @@ interface AuctionContextType {
   updateSettings: (newSettings: Partial<AuctionSettings>) => void;
   toggleBotBidding: () => void;
   botBiddingEnabled: boolean;
+  isCloudConnected: boolean;
 }
 
 const DEFAULT_SETTINGS: AuctionSettings = {
@@ -153,14 +164,39 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [tradeOffers, setTradeOffers] = useState<TradeOffer[]>([]);
   const [eventLogs, setEventLogs] = useState<AuctionEventLog[]>([]);
   const [rtmState, setRtmState] = useState<RtmState | null>(null);
+  const [isCloudConnected, setIsCloudConnected] = useState<boolean>(false);
 
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
+  const supabaseChannelRef = useRef<RealtimeChannel | null>(null);
+  const supabaseSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isHydratedRef = useRef<boolean>(false);
   const lastFinalizedIdxRef = useRef<number | null>(null);
 
-  // Broadcast function to all tabs
+  // Reusable state synchronization applier
+  const applySyncedState = useCallback((syncData: Record<string, unknown>) => {
+    if (syncData.franchises) setFranchises(syncData.franchises as Franchise[]);
+    if (syncData.players) setPlayers(syncData.players as Player[]);
+    if (syncData.auctionStatus) setAuctionStatus(syncData.auctionStatus as AuctionStatus);
+    if (typeof syncData.currentPlayerIndex === "number") setCurrentPlayerIndex(syncData.currentPlayerIndex);
+    if (syncData.currentBids) setCurrentBids(syncData.currentBids as Bid[]);
+    if (syncData.franchiseStatuses) setFranchiseStatuses(syncData.franchiseStatuses as Record<string, "active" | "skipped" | "out">);
+    if (typeof syncData.timer === "number") setTimer(syncData.timer);
+    if (typeof syncData.timerExpiresAt === "number" || syncData.timerExpiresAt === null) {
+      setTimerExpiresAt(syncData.timerExpiresAt as number | null);
+    }
+    if (typeof syncData.isTimerRunning === "boolean") setIsTimerRunning(syncData.isTimerRunning);
+    if (syncData.settings) setSettings(syncData.settings as AuctionSettings);
+    if (syncData.rulePreset) setRulePresetState(syncData.rulePreset as RulePreset);
+    if (syncData.watchlists) setWatchlists(syncData.watchlists as WatchlistItem[]);
+    if (syncData.tradeOffers) setTradeOffers(syncData.tradeOffers as TradeOffer[]);
+    if (syncData.eventLogs) setEventLogs(syncData.eventLogs as AuctionEventLog[]);
+    if ("rtmState" in syncData) setRtmState(syncData.rtmState as RtmState | null);
+  }, []);
+
+  // Broadcast function to local tabs AND global Supabase Realtime channel
   const broadcastSync = useCallback((data: Record<string, unknown>) => {
+    // 1. Cross-tab on local machine
     if (broadcastChannelRef.current) {
       try {
         broadcastChannelRef.current.postMessage({
@@ -169,9 +205,14 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         });
       } catch {}
     }
+
+    // 2. Cloud Realtime across all internet users/devices via Supabase
+    if (supabaseChannelRef.current) {
+      broadcastSupabaseEvent(supabaseChannelRef.current, "STATE_SYNC", data);
+    }
   }, []);
 
-  // Save shared state to LocalStorage
+  // Save shared state to LocalStorage and debounced Supabase Cloud DB
   const persistState = useCallback(() => {
     if (typeof window !== "undefined" && isHydratedRef.current) {
       const stateToSave = {
@@ -194,6 +235,16 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
       } catch {}
+
+      // Supabase cloud persistence (debounced by 800ms to prevent flooding)
+      if (isSupabaseConfigured()) {
+        if (supabaseSaveTimeoutRef.current) {
+          clearTimeout(supabaseSaveTimeoutRef.current);
+        }
+        supabaseSaveTimeoutRef.current = setTimeout(() => {
+          saveRemoteAuctionState(stateToSave);
+        }, 800);
+      }
     }
   }, [
     franchises,
@@ -327,23 +378,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         bc.onmessage = (event) => {
           if (event.data?.type === "STATE_SYNC") {
             const syncData = event.data.payload;
-            if (syncData.franchises) setFranchises(syncData.franchises);
-            if (syncData.players) setPlayers(syncData.players);
-            if (syncData.auctionStatus) setAuctionStatus(syncData.auctionStatus);
-            if (typeof syncData.currentPlayerIndex === "number") setCurrentPlayerIndex(syncData.currentPlayerIndex);
-            if (syncData.currentBids) setCurrentBids(syncData.currentBids);
-            if (syncData.franchiseStatuses) setFranchiseStatuses(syncData.franchiseStatuses);
-            if (typeof syncData.timer === "number") setTimer(syncData.timer);
-            if (typeof syncData.timerExpiresAt === "number" || syncData.timerExpiresAt === null) {
-              setTimerExpiresAt(syncData.timerExpiresAt);
-            }
-            if (typeof syncData.isTimerRunning === "boolean") setIsTimerRunning(syncData.isTimerRunning);
-            if (syncData.settings) setSettings(syncData.settings);
-            if (syncData.rulePreset) setRulePresetState(syncData.rulePreset);
-            if (syncData.watchlists) setWatchlists(syncData.watchlists);
-            if (syncData.tradeOffers) setTradeOffers(syncData.tradeOffers);
-            if (syncData.eventLogs) setEventLogs(syncData.eventLogs);
-            if ("rtmState" in syncData) setRtmState(syncData.rtmState);
+            if (syncData) applySyncedState(syncData);
           } else if (event.data?.type === "REQUEST_SYNC") {
             // New tab joined, provide current state
             try {
@@ -365,33 +400,69 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (event.key === STORAGE_KEY && event.newValue) {
           try {
             const parsed = JSON.parse(event.newValue);
-            if (parsed.franchises) setFranchises(parsed.franchises);
-            if (parsed.players) setPlayers(parsed.players);
-            if (parsed.auctionStatus) setAuctionStatus(parsed.auctionStatus);
-            if (typeof parsed.currentPlayerIndex === "number") setCurrentPlayerIndex(parsed.currentPlayerIndex);
-            if (parsed.currentBids) setCurrentBids(parsed.currentBids);
-            if (parsed.franchiseStatuses) setFranchiseStatuses(parsed.franchiseStatuses);
-            if (typeof parsed.timer === "number") setTimer(parsed.timer);
-            if (typeof parsed.timerExpiresAt === "number" || parsed.timerExpiresAt === null) {
-              setTimerExpiresAt(parsed.timerExpiresAt);
-            }
-            if (typeof parsed.isTimerRunning === "boolean") setIsTimerRunning(parsed.isTimerRunning);
-            if (parsed.settings) setSettings(parsed.settings);
-            if (parsed.rulePreset) setRulePresetState(parsed.rulePreset);
-            if (parsed.watchlists) setWatchlists(parsed.watchlists);
-            if (parsed.tradeOffers) setTradeOffers(parsed.tradeOffers);
-            if (parsed.eventLogs) setEventLogs(parsed.eventLogs);
-            if ("rtmState" in parsed) setRtmState(parsed.rtmState);
+            if (parsed) applySyncedState(parsed);
           } catch {}
         }
       };
 
       window.addEventListener("storage", handleStorageEvent);
 
+      // 6. Initialize Supabase Cloud Realtime Channel (Global Multi-Device Synchronization)
+      if (isSupabaseConfigured()) {
+        const client = getSupabase();
+        if (client) {
+          // Fetch existing remote auction room state from database
+          fetchRemoteAuctionState().then((remoteState) => {
+            if (remoteState) {
+              applySyncedState(remoteState);
+            }
+          });
+
+          // Join realtime channel
+          const channel = client.channel("psl_live_auction_channel", {
+            config: { broadcast: { self: false } },
+          });
+
+          channel
+            .on("broadcast", { event: "STATE_SYNC" }, (event) => {
+              if (event.payload) {
+                applySyncedState(event.payload as Record<string, unknown>);
+              }
+            })
+            .on(
+              "postgres_changes",
+              {
+                event: "*",
+                schema: "public",
+                table: "psl_auction_rooms",
+                filter: `room_id=eq.${DEFAULT_ROOM_ID}`,
+              },
+              (payload) => {
+                if (payload.new && (payload.new as { state?: Record<string, unknown> }).state) {
+                  applySyncedState((payload.new as { state: Record<string, unknown> }).state);
+                }
+              }
+            )
+            .subscribe((status) => {
+              if (status === "SUBSCRIBED") {
+                setIsCloudConnected(true);
+              }
+            });
+
+          supabaseChannelRef.current = channel;
+        }
+      }
+
       return () => {
         window.removeEventListener("storage", handleStorageEvent);
         if (broadcastChannelRef.current) {
           broadcastChannelRef.current.close();
+        }
+        if (supabaseChannelRef.current) {
+          supabaseChannelRef.current.unsubscribe();
+        }
+        if (supabaseSaveTimeoutRef.current) {
+          clearTimeout(supabaseSaveTimeoutRef.current);
         }
       };
     }
@@ -1076,6 +1147,10 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       franchiseName: franchise.name,
       amount: proposedAmount,
     });
+
+    if (isSupabaseConfigured()) {
+      recordSupabaseBid(newBid);
+    }
 
     broadcastSync({
       currentBids: updatedBids,
@@ -1942,6 +2017,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updateSettings,
         toggleBotBidding,
         botBiddingEnabled: settings.botBiddingEnabled !== false,
+        isCloudConnected,
       }}
     >
       {children}
