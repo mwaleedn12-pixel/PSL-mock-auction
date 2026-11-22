@@ -96,6 +96,8 @@ export default function LiveAuctionArenaPage() {
     rtmState,
   } = useAuction();
 
+  const isDark = themeMode === "broadcast_dark";
+
   // Top Tabs
   const [activeMainTab, setActiveMainTab] = useState<
     "arena" | "purses" | "squads" | "players" | "rules" | "chat" | "summary"
@@ -198,7 +200,9 @@ export default function LiveAuctionArenaPage() {
       {/* 1. TOP HEADER: ACTIVE TEAM COCKPIT BANNER                */}
       {/* ======================================================== */}
       {role === "team_owner" && activeFranchise ? (
-        <div className="bg-white border border-slate-200 rounded-2xl p-3 px-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div className={`border rounded-2xl p-3 px-4 shadow-sm flex flex-wrap items-center justify-between gap-3 transition-colors ${
+          isDark ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200"
+        }`}>
           {/* Left: Active Franchise, Owner Identity & Financials */}
           <div className="flex items-center gap-3">
             <div
@@ -209,8 +213,10 @@ export default function LiveAuctionArenaPage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-black text-slate-900">{activeFranchise.name}</h2>
-                <span className="text-xs text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                <h2 className={`text-sm font-black ${isDark ? "text-white" : "text-slate-900"}`}>{activeFranchise.name}</h2>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
+                  isDark ? "text-emerald-300 bg-emerald-950/60 border-emerald-500/40" : "text-emerald-700 bg-emerald-50 border-emerald-200"
+                }`}>
                   🏏 {activeFranchise.ownerName || "Owner"}
                 </span>
                 <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
@@ -221,12 +227,14 @@ export default function LiveAuctionArenaPage() {
                   ● {auctionStatus.toUpperCase()}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-600 mt-0.5">
-                <span>Remaining: <strong className="text-emerald-700 font-mono font-black">{formatPKR(activeFranchise.remainingPurse)}</strong></span>
-                <span>Spent: <strong className="text-slate-800 font-mono font-bold">{formatPKR(activeFranchise.initialPurse - activeFranchise.remainingPurse)}</strong></span>
-                <span>Squad: <strong className="text-slate-900 font-bold">{players.filter((p) => p.soldToFranchiseId === activeFranchise.id).length}/{activeFranchise.maxSquadSize}</strong></span>
-                <span>Overseas: <strong className="text-cyan-700 font-bold">{players.filter((p) => p.soldToFranchiseId === activeFranchise.id && p.isOverseas).length}/{activeFranchise.maxOverseas}</strong></span>
-                <span>RTM: <strong className="text-amber-700 font-bold">{activeFranchise.rtmCardsLeft ?? 2} Cards</strong></span>
+              <div className={`flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs mt-0.5 ${
+                isDark ? "text-slate-400" : "text-slate-600"
+              }`}>
+                <span>Remaining: <strong className="text-emerald-400 font-mono font-black">{formatPKR(activeFranchise.remainingPurse)}</strong></span>
+                <span>Spent: <strong className={`font-mono font-bold ${isDark ? "text-slate-300" : "text-slate-800"}`}>{formatPKR(activeFranchise.initialPurse - activeFranchise.remainingPurse)}</strong></span>
+                <span>Squad: <strong className={`font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{players.filter((p) => p.soldToFranchiseId === activeFranchise.id).length}/{activeFranchise.maxSquadSize}</strong></span>
+                <span>Overseas: <strong className="text-cyan-400 font-bold">{players.filter((p) => p.soldToFranchiseId === activeFranchise.id && p.isOverseas).length}/{activeFranchise.maxOverseas}</strong></span>
+                <span>RTM: <strong className="text-amber-400 font-bold">{activeFranchise.rtmCardsLeft ?? 2} Cards</strong></span>
               </div>
             </div>
           </div>
@@ -277,9 +285,13 @@ export default function LiveAuctionArenaPage() {
           </div>
         </div>
       ) : role === "admin" ? (
-        <div className="bg-white border-2 border-amber-300 rounded-2xl p-3 px-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div className={`border-2 rounded-2xl p-3 px-4 shadow-sm flex flex-wrap items-center justify-between gap-3 transition-colors ${
+          isDark ? "bg-slate-900 border-amber-500/50 text-white" : "bg-white border-amber-300"
+        }`}>
           <div className="flex items-center gap-2.5">
-            <span className="p-1 px-2.5 rounded-lg bg-amber-100 text-amber-800 border border-amber-300 font-black text-xs">👑 Super Admin</span>
+            <span className={`p-1 px-2.5 rounded-lg font-black text-xs border ${
+              isDark ? "bg-amber-500/20 text-amber-300 border-amber-500/40" : "bg-amber-100 text-amber-800 border-amber-300"
+            }`}>👑 Super Admin</span>
             <span className={`text-xs font-black px-2.5 py-0.5 rounded-full border ${
               auctionStatus === "Live"
                 ? "bg-emerald-100 text-emerald-800 border-emerald-300 animate-pulse"
@@ -287,7 +299,7 @@ export default function LiveAuctionArenaPage() {
             }`}>
               ● {auctionStatus.toUpperCase()}
             </span>
-            <span className="text-xs text-slate-500 hidden sm:inline">
+            <span className={`text-xs hidden sm:inline ${isDark ? "text-slate-400" : "text-slate-500"}`}>
               Lot #{currentPlayerIndex + 1} of {players.length}
             </span>
           </div>
@@ -384,13 +396,15 @@ export default function LiveAuctionArenaPage() {
       {/* ======================================================== */}
       {/* 2. MAIN NAVIGATION TABS (USER-REQUESTED SUITE)           */}
       {/* ======================================================== */}
-      <div className="flex items-center gap-1.5 p-1.5 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-x-auto text-xs font-bold no-scrollbar">
+      <div className={`flex items-center gap-1.5 p-1.5 border rounded-2xl shadow-sm overflow-x-auto text-xs font-bold no-scrollbar transition-colors ${
+        isDark ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+      }`}>
         <button
           onClick={() => setActiveMainTab("arena")}
           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl whitespace-nowrap transition-colors ${
             activeMainTab === "arena"
               ? "bg-emerald-600 text-white shadow-sm"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              : isDark ? "text-slate-400 hover:text-white hover:bg-slate-800" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
           }`}
         >
           <Gavel className="w-3.5 h-3.5" />
@@ -402,7 +416,7 @@ export default function LiveAuctionArenaPage() {
           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl whitespace-nowrap transition-colors ${
             activeMainTab === "purses"
               ? "bg-emerald-600 text-white shadow-sm"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              : isDark ? "text-slate-400 hover:text-white hover:bg-slate-800" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
           }`}
         >
           <Shield className="w-3.5 h-3.5" />
@@ -414,7 +428,7 @@ export default function LiveAuctionArenaPage() {
           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl whitespace-nowrap transition-colors ${
             activeMainTab === "squads"
               ? "bg-emerald-600 text-white shadow-sm"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              : isDark ? "text-slate-400 hover:text-white hover:bg-slate-800" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
           }`}
         >
           <Users className="w-3.5 h-3.5" />
@@ -426,7 +440,7 @@ export default function LiveAuctionArenaPage() {
           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl whitespace-nowrap transition-colors ${
             activeMainTab === "players"
               ? "bg-emerald-600 text-white shadow-sm"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              : isDark ? "text-slate-400 hover:text-white hover:bg-slate-800" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
           }`}
         >
           <Heart className="w-3.5 h-3.5" />
@@ -438,7 +452,7 @@ export default function LiveAuctionArenaPage() {
           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl whitespace-nowrap transition-colors ${
             activeMainTab === "rules"
               ? "bg-emerald-600 text-white shadow-sm"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              : isDark ? "text-slate-400 hover:text-white hover:bg-slate-800" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
           }`}
         >
           <Sliders className="w-3.5 h-3.5" />
@@ -450,7 +464,7 @@ export default function LiveAuctionArenaPage() {
           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl whitespace-nowrap transition-colors ${
             activeMainTab === "chat"
               ? "bg-emerald-600 text-white shadow-sm"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              : isDark ? "text-slate-400 hover:text-white hover:bg-slate-800" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
           }`}
         >
           <MessageSquare className="w-3.5 h-3.5" />
@@ -462,7 +476,7 @@ export default function LiveAuctionArenaPage() {
           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl whitespace-nowrap transition-colors ${
             activeMainTab === "summary"
               ? "bg-emerald-600 text-white shadow-sm"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              : isDark ? "text-slate-400 hover:text-white hover:bg-slate-800" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
           }`}
         >
           <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -490,13 +504,17 @@ export default function LiveAuctionArenaPage() {
             <div
               className={`rounded-2xl p-4 sm:p-5 shadow-sm relative overflow-hidden transition-all duration-300 border flex items-center justify-between gap-4 ${
                 highestBid
-                  ? "bg-white border-2 border-emerald-500 shadow-emerald-500/10"
-                  : "bg-white border-slate-200"
+                  ? isDark
+                    ? "bg-slate-900 border-2 border-emerald-500 shadow-emerald-500/20"
+                    : "bg-white border-2 border-emerald-500 shadow-emerald-500/10"
+                  : isDark
+                    ? "bg-slate-900 border-slate-800 text-white"
+                    : "bg-white border-slate-200"
               }`}
             >
               <div className="relative z-10 flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                  <span className={`text-[10px] font-black uppercase tracking-wider block ${isDark ? "text-slate-400" : "text-slate-500"}`}>
                     Current Highest Bid
                   </span>
                   {highestBid && (
@@ -505,20 +523,20 @@ export default function LiveAuctionArenaPage() {
                     </span>
                   )}
                 </div>
-                <p className="text-4xl sm:text-5xl font-black text-amber-500 font-mono tracking-tight leading-none mt-1.5">
+                <p className="text-4xl sm:text-5xl font-black text-amber-400 font-mono tracking-tight leading-none mt-1.5 drop-shadow-sm">
                   {highestBid ? formatPKR(highestBid.amount) : formatPKR(currentPlayer?.basePrice || 0)}
                 </p>
                 {highestBid ? (
                   <div className="mt-2 flex items-center gap-2">
-                    <span className="text-xs text-slate-600 font-bold">
+                    <span className={`text-xs font-bold ${isDark ? "text-slate-300" : "text-slate-600"}`}>
                       Leading Franchise:{" "}
-                      <span className="text-emerald-800 font-black underline decoration-emerald-500/50">
+                      <span className="text-emerald-400 font-black underline decoration-emerald-500/50">
                         {highestBid.franchiseName}
                       </span>
                     </span>
                   </div>
                 ) : (
-                  <p className="text-[11px] text-slate-500 mt-1">
+                  <p className={`text-[11px] mt-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
                     Opening at base price ({currentPlayer?.category})
                   </p>
                 )}
@@ -537,29 +555,37 @@ export default function LiveAuctionArenaPage() {
             <LiveAuctionActivityFeed maxItems={6} />
 
             {/* Live Player Bid Timeline History Card */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-100">
-                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+            <div className={`border rounded-2xl p-4 shadow-sm transition-colors ${
+              isDark ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200"
+            }`}>
+              <div className={`flex items-center justify-between mb-2 pb-2 border-b ${
+                isDark ? "border-slate-800" : "border-slate-100"
+              }`}>
+                <h4 className={`text-xs font-bold uppercase tracking-wider ${isDark ? "text-slate-300" : "text-slate-700"}`}>
                   Player Bidding History ({currentBids.length})
                 </h4>
-                <span className="text-[11px] text-slate-400 font-mono">Live Feed</span>
+                <span className={`text-[11px] font-mono ${isDark ? "text-slate-500" : "text-slate-400"}`}>Live Feed</span>
               </div>
 
               <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1 text-xs">
                 {currentBids.length === 0 ? (
-                  <p className="text-center text-xs text-slate-400 py-3">No bids placed for this player yet.</p>
+                  <p className={`text-center text-xs py-3 ${isDark ? "text-slate-500" : "text-slate-400"}`}>No bids placed for this player yet.</p>
                 ) : (
                   [...currentBids].reverse().map((bid, i) => (
                     <div
                       key={bid.id}
                       className={`p-2 rounded-xl border flex items-center justify-between ${
                         i === 0
-                          ? "bg-emerald-50 border-emerald-300 text-emerald-900 font-bold"
-                          : "bg-slate-50 border-slate-200 text-slate-700"
+                          ? isDark
+                            ? "bg-emerald-950/60 border-emerald-500/50 text-emerald-300 font-bold"
+                            : "bg-emerald-50 border-emerald-300 text-emerald-900 font-bold"
+                          : isDark
+                            ? "bg-slate-950/60 border-slate-800 text-slate-300"
+                            : "bg-slate-50 border-slate-200 text-slate-700"
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-slate-400 text-[10px]">
+                        <span className={`font-mono text-[10px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>
                           {new Date(bid.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                         </span>
                         <span>{bid.franchiseName}</span>
@@ -589,9 +615,11 @@ export default function LiveAuctionArenaPage() {
       {activeMainTab === "squads" && (
         <div className="space-y-6">
           {/* Detailed Squad Composition Grid */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-            <h3 className="text-base font-black text-slate-900 mb-1">Squad Composition Breakdown (All 8 Teams)</h3>
-            <p className="text-xs text-slate-500 mb-4">
+          <div className={`rounded-3xl border p-6 shadow-sm transition-colors ${
+            isDark ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200"
+          }`}>
+            <h3 className={`text-base font-black mb-1 ${isDark ? "text-white" : "text-slate-900"}`}>Squad Composition Breakdown (All 8 Teams)</h3>
+            <p className={`text-xs mb-4 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
               Real-time composition tracking of Batters, Bowlers, All-rounders, Keepers, and Overseas slots.
             </p>
 
@@ -727,11 +755,15 @@ export default function LiveAuctionArenaPage() {
       {/* TAB 4: PLAYER LIST & WISHLIST WITH HEART ICONS           */}
       {/* ======================================================== */}
       {activeMainTab === "players" && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+        <div className={`rounded-3xl border p-6 shadow-sm space-y-4 transition-colors ${
+          isDark ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200"
+        }`}>
+          <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b ${
+            isDark ? "border-slate-800" : "border-slate-100"
+          }`}>
             <div>
-              <h3 className="text-base font-black text-slate-900">Official Player Pool &amp; Wishlist</h3>
-              <p className="text-xs text-slate-500">Search and click the heart icon (♥) to bookmark players to your strategy wishlist.</p>
+              <h3 className={`text-base font-black ${isDark ? "text-white" : "text-slate-900"}`}>Official Player Pool &amp; Wishlist</h3>
+              <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>Search and click the heart icon (♥) to bookmark players to your strategy wishlist.</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -883,11 +915,15 @@ export default function LiveAuctionArenaPage() {
       {/* TAB 5: OFFICIAL AUCTION RULES                            */}
       {/* ======================================================== */}
       {activeMainTab === "rules" && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className={`rounded-3xl border p-6 sm:p-8 shadow-sm space-y-6 transition-colors ${
+          isDark ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200"
+        }`}>
+          <div className={`flex items-center justify-between pb-3 border-b ${
+            isDark ? "border-slate-800" : "border-slate-100"
+          }`}>
             <div>
-              <h3 className="text-lg font-black text-slate-900">HBL PSL 12 Official Mock Auction Rules</h3>
-              <p className="text-xs text-slate-500">Official tournament guidelines, purse regulations, and bidding increments.</p>
+              <h3 className={`text-lg font-black ${isDark ? "text-white" : "text-slate-900"}`}>HBL PSL 12 Official Mock Auction Rules</h3>
+              <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>Official tournament guidelines, purse regulations, and bidding increments.</p>
             </div>
             {role === "admin" && (
               <Link href="/admin" className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs">
@@ -934,14 +970,18 @@ export default function LiveAuctionArenaPage() {
       {/* TAB 6: DEDICATED LIVE CHAT & WAR ROOM                    */}
       {/* ======================================================== */}
       {activeMainTab === "chat" && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className={`rounded-3xl border p-6 shadow-sm space-y-4 transition-colors ${
+          isDark ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200"
+        }`}>
+          <div className={`flex items-center justify-between pb-3 border-b ${
+            isDark ? "border-slate-800" : "border-slate-100"
+          }`}>
             <div>
-              <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-emerald-600" />
+              <h3 className={`text-base font-black flex items-center gap-2 ${isDark ? "text-white" : "text-slate-900"}`}>
+                <MessageSquare className="w-5 h-5 text-emerald-400" />
                 <span>Live Interaction &amp; War Room</span>
               </h3>
-              <p className="text-xs text-slate-500">Real-time messaging channels synchronized across all tabs and devices.</p>
+              <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>Real-time messaging channels synchronized across all tabs and devices.</p>
             </div>
 
             <div className="flex rounded-xl bg-slate-100 p-1 text-xs font-bold">
@@ -1017,11 +1057,15 @@ export default function LiveAuctionArenaPage() {
       {/* TAB 7: SUMMARY, WHATSAPP SHARE & DOWNLOADS               */}
       {/* ======================================================== */}
       {activeMainTab === "summary" && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+        <div className={`rounded-3xl border p-6 shadow-sm space-y-6 transition-colors ${
+          isDark ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200"
+        }`}>
+          <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b ${
+            isDark ? "border-slate-800" : "border-slate-100"
+          }`}>
             <div>
-              <h3 className="text-base font-black text-slate-900">Complete Auction Summary &amp; Downloads</h3>
-              <p className="text-xs text-slate-500">Live summary of sold and unsold players with 1-click WhatsApp news broadcast.</p>
+              <h3 className={`text-base font-black ${isDark ? "text-white" : "text-slate-900"}`}>Complete Auction Summary &amp; Downloads</h3>
+              <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>Live summary of sold and unsold players with 1-click WhatsApp news broadcast.</p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">

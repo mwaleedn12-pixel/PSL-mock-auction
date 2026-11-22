@@ -34,8 +34,10 @@ export const BidControls: React.FC = () => {
     placeBid,
     skipCurrentPlayer,
     outCurrentPlayer,
+    themeMode,
   } = useAuction();
 
+  const isDark = themeMode === "broadcast_dark";
   const [bidError, setBidError] = useState<string | null>(null);
   const [bidSuccess, setBidSuccess] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -150,9 +152,13 @@ export const BidControls: React.FC = () => {
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm relative overflow-hidden">
+    <div className={`border rounded-2xl p-4 sm:p-5 shadow-sm relative overflow-hidden transition-colors ${
+      isDark ? "bg-slate-900/95 border-slate-800 text-white shadow-xl" : "bg-white border-slate-200"
+    }`}>
       {/* Franchise Status Ribbon */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+      <div className={`flex items-center justify-between pb-3 border-b ${
+        isDark ? "border-slate-800" : "border-slate-100"
+      }`}>
         <div className="flex items-center gap-2.5">
           <div
             className="w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs text-white shadow-sm border border-white/20 shrink-0"
@@ -162,16 +168,16 @@ export const BidControls: React.FC = () => {
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <h4 className="text-sm font-black text-slate-900">{currentActingFranchise.name}</h4>
+              <h4 className={`text-sm font-black ${isDark ? "text-white" : "text-slate-900"}`}>{currentActingFranchise.name}</h4>
               {role === "admin" && (
-                <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 rounded">
+                <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold px-1.5 rounded">
                   Admin Simulator
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <div className={`flex items-center gap-1.5 text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
               <Coins className="w-3.5 h-3.5 text-amber-500" />
-              <span>Purse: <strong className="text-emerald-700 font-bold font-mono">{formatPKR(currentActingFranchise.remainingPurse)}</strong></span>
+              <span>Purse: <strong className="text-emerald-400 font-bold font-mono">{formatPKR(currentActingFranchise.remainingPurse)}</strong></span>
             </div>
           </div>
         </div>

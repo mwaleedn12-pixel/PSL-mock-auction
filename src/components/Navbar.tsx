@@ -30,19 +30,26 @@ export const Navbar: React.FC = () => {
     highestBid,
     timer,
     isCloudConnected,
+    themeMode,
   } = useAuction();
 
+  const isDark = themeMode === "broadcast_dark";
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const navLinks = [
     { href: "/auction", label: "Live Auction", icon: Gavel },
     { href: "/join", label: "Select Team", icon: Shield },
+    { href: "/franchise", label: "Franchises", icon: Shield },
+    { href: "/squads", label: "Squads & XI", icon: UserCheck },
+    { href: "/analytics", label: "Analytics", icon: Crown },
     { href: "/admin", label: "Admin Room", icon: Sliders },
   ];
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+      <header className={`sticky top-0 z-40 backdrop-blur-md border-b shadow-sm transition-colors ${
+        isDark ? "bg-slate-950/95 border-slate-800 text-white" : "bg-white/95 border-slate-200 text-slate-900"
+      }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-3">
             {/* Brand Logo - Official HBL PSL Branding */}
@@ -57,8 +64,8 @@ export const Navbar: React.FC = () => {
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-black text-slate-900 text-base tracking-tight">
-                    HBL PSL 12 <span className="text-emerald-600 font-extrabold">Auction</span>
+                  <span className={`font-black text-base tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}>
+                    HBL PSL 12 <span className="text-emerald-500 font-extrabold">Auction</span>
                   </span>
                 </div>
               </div>
@@ -73,10 +80,14 @@ export const Navbar: React.FC = () => {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black transition-colors ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-colors ${
                       isActive
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                        ? isDark
+                          ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-sm"
+                          : "bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm"
+                        : isDark
+                          ? "text-slate-400 hover:text-white hover:bg-slate-900"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                     }`}
                   >
                     <Icon className="w-3.5 h-3.5" />
