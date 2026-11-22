@@ -18,9 +18,13 @@ export interface PlayerStats {
   highestScore?: string | number;
   hundreds?: number;
   fifties?: number;
+  fours?: number;
+  sixes?: number;
+  recentPerformances?: string[];
   wickets?: number;
   bowlingAverage?: number;
   economyRate?: number;
+  bowlingStrikeRate?: number;
   bestBowling?: string;
   catches?: number;
   stumpings?: number;
@@ -60,6 +64,11 @@ export interface Player {
   // Right to Match (RTM) previous franchise
   previousFranchiseId?: string;
   wasRtmUsed?: boolean;
+  // Additional Profile Information
+  estimatedValue?: number;
+  strengths?: string[];
+  weaknesses?: string[];
+  franchiseHistory?: string[];
 }
 
 export interface Franchise {

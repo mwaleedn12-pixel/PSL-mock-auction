@@ -43,6 +43,7 @@ import {
   SkipForward,
   SkipBack,
   AlertTriangle,
+  Bot,
 } from "lucide-react";
 
 export default function AdminControlPanelPage() {
@@ -74,6 +75,8 @@ export default function AdminControlPanelPage() {
     handleTradeAction,
     eventLogs,
     isCloudConnected,
+    botBiddingEnabled,
+    toggleBotBidding,
   } = useAuction();
 
   // Authentication State for Admin Login / Signup
@@ -84,7 +87,7 @@ export default function AdminControlPanelPage() {
   const [authError, setAuthError] = useState<string | null>(null);
 
   // Admin Dashboard Active Tab
-  const [adminTab, setAdminTab] = useState<"setup" | "rules" | "lobby" | "live" | "trades" | "reports">("setup");
+  const [adminTab, setAdminTab] = useState<"setup" | "rules" | "lobby" | "live" | "trades" | "reports" | "bots">("setup");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -411,6 +414,18 @@ export default function AdminControlPanelPage() {
         >
           <Download className="w-4 h-4" />
           <span>6. Reports &amp; Downloads</span>
+        </button>
+
+        <button
+          onClick={() => setAdminTab("bots")}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl whitespace-nowrap transition-colors ${
+            adminTab === "bots"
+              ? "bg-purple-600 text-white shadow-sm"
+              : "text-purple-700 hover:text-purple-900 hover:bg-purple-50"
+          }`}
+        >
+          <Bot className="w-4 h-4 text-purple-600" />
+          <span>7. Developer Bot Simulator ({botBiddingEnabled ? "ON" : "OFF"})</span>
         </button>
       </div>
 
@@ -1046,6 +1061,64 @@ export default function AdminControlPanelPage() {
               >
                 📥 Download Squads CSV
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB 7: DEVELOPER-ONLY BOT SIMULATOR                      */}
+      {/* ======================================================== */}
+      {adminTab === "bots" && (
+        <div className="bg-white rounded-3xl border border-purple-200 p-6 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-purple-100">
+            <div>
+              <div className="flex items-center gap-2">
+                <Bot className="w-6 h-6 text-purple-600" />
+                <h3 className="text-base font-black text-slate-900">Developer Testing Mode: AI Bot Simulator</h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-1 max-w-xl">
+                The AI bots are isolated to this developer console for testing real-time bidding, timers, and Right to Match (RTM) workflows. They are strictly hidden from normal franchise owners and live spectators.
+              </p>
+            </div>
+
+            <button
+              onClick={toggleBotBidding}
+              className={`px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md transition-all ${
+                botBiddingEnabled
+                  ? "bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/30"
+                  : "bg-slate-200 hover:bg-slate-300 text-slate-800"
+              }`}
+            >
+              <Bot className="w-4 h-4" />
+              <span>Simulation Status: {botBiddingEnabled ? "ACTIVE (ON)" : "INACTIVE (OFF)"}</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div className="p-4 rounded-2xl bg-purple-50/60 border border-purple-200 space-y-2">
+              <h4 className="font-black text-purple-900 uppercase text-[11px]">Developer Mode Guidelines</h4>
+              <ul className="text-slate-600 space-y-1.5 list-disc list-inside">
+                <li>Bots simulate rival bids for other 7 franchises within authentic purse and overseas constraints.</li>
+                <li>When a human owner (e.g. Islamabad United) bids, bots respond with a 3.5s delay up to realistic player valuations.</li>
+                <li>Bots will automatically decline or exercise RTM based on purse health and remaining RTM cards.</li>
+                <li>Normal users see only live human franchises; bot badges are completely removed from the public UI.</li>
+              </ul>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+              <h4 className="font-black text-slate-900 uppercase text-[11px]">Rival Franchises in Test Suite</h4>
+              <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                {franchises.map((f) => (
+                  <div key={f.id} className="p-2 rounded-xl bg-white border border-slate-200 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: f.primaryColor }} />
+                      <span className="font-bold text-slate-800 truncate">{f.name}</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-emerald-700 font-bold shrink-0">{formatPKR(f.remainingPurse)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

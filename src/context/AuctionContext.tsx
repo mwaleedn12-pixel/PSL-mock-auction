@@ -113,6 +113,15 @@ interface AuctionContextType {
   // Real-time Chat Channels
   messages: AuctionMessage[];
   sendMessage: (channel: 'owners' | 'spectators', text: string) => void;
+  deleteMessage: (messageId: string) => void;
+
+  // Broadcast Overlay for Sold / Unsold celebrations
+  announcementOverlay: { type: "sold" | "unsold"; player: Player; franchise?: Franchise; amount?: number } | null;
+  dismissAnnouncementOverlay: () => void;
+
+  // Theme Mode (Broadcast Dark default as requested vs Stadium Light)
+  themeMode: "broadcast_dark" | "stadium_light";
+  toggleThemeMode: () => void;
 
   // Admin Account & Sign-up
   adminUser: AdminUser | null;
@@ -141,9 +150,9 @@ const DEFAULT_SETTINGS: AuctionSettings = {
   maxRetentions: 4,
   maxDirectForeignSignings: 1,
   defaultTimerSeconds: 30,
-  timerResetSeconds: 15,
+  timerResetSeconds: 10,
   extensionSeconds: 10,
-  extensionTriggerSeconds: 5,
+  extensionTriggerSeconds: 10,
   autoSellOnAllOut: true,
   soundEffectsEnabled: true,
   voiceAnnouncements: true,
@@ -151,7 +160,7 @@ const DEFAULT_SETTINGS: AuctionSettings = {
   enableRTM: true,
   rtmCardsPerFranchise: 2,
   scheduledStartTime: "",
-  botBiddingEnabled: true,
+  botBiddingEnabled: false, // Developer-only testing mode
   manualFranchiseId: "iu",
   allowRetentions: true,
   allowTradesBeforeAuction: true,
@@ -188,6 +197,21 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [rtmState, setRtmState] = useState<RtmState | null>(null);
   const [isCloudConnected, setIsCloudConnected] = useState<boolean>(false);
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
+  const [themeMode, setThemeMode] = useState<"broadcast_dark" | "stadium_light">("broadcast_dark");
+  const [announcementOverlay, setAnnouncementOverlay] = useState<{
+    type: "sold" | "unsold";
+    player: Player;
+    franchise?: Franchise;
+    amount?: number;
+  } | null>(null);
+
+  const toggleThemeMode = () => {
+    setThemeMode((prev) => (prev === "broadcast_dark" ? "stadium_light" : "broadcast_dark"));
+  };
+
+  const dismissAnnouncementOverlay = () => {
+    setAnnouncementOverlay(null);
+  };
   const [messages, setMessages] = useState<AuctionMessage[]>([
     {
       id: "msg-init-1",
@@ -650,6 +674,12 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     broadcastSync({ messages: updatedMessages });
   };
 
+  const deleteMessage = (messageId: string) => {
+    const updatedMessages = messages.filter((m) => m.id !== messageId);
+    setMessages(updatedMessages);
+    broadcastSync({ messages: updatedMessages });
+  };
+
   const addNewPlayerDuringAuction = (newPlayerData: Partial<Player>) => {
     const id = `p-live-${Date.now()}`;
     const newPlayer: Player = {
@@ -788,6 +818,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Navigate to Next Player
   const goToNextPlayer = useCallback(() => {
+    setAnnouncementOverlay(null);
     setCurrentBids([]);
     setFranchiseStatuses({});
     const duration = settings.defaultTimerSeconds || 30;
@@ -901,6 +932,20 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setRtmState(null);
       setIsTimerRunning(false);
       setTimerExpiresAt(null);
+
+      // Trigger SOLD Celebration Overlay Banner
+      setAnnouncementOverlay({
+        type: "sold",
+        player: { ...playerToSell, soldPrice, soldToFranchiseId },
+        franchise: winningTeam,
+        amount: soldPrice,
+      });
+      soundEngine.playGavelHammerSound();
+      soundEngine.playSoldFanfare();
+      soundEngine.speakAnnouncement(
+        `Sold! ${playerToSell.name} sold to ${winningTeam?.name || soldToFranchiseId} for PKR ${(soldPrice / 10000000).toFixed(2)} Crore!`
+      );
+
       broadcastSync({
         franchises: updatedFranchises,
         players: updatedPlayers,
@@ -910,8 +955,9 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
 
       setTimeout(() => {
+        setAnnouncementOverlay(null);
         goToNextPlayer();
-      }, 3500);
+      }, 4000);
     },
     [franchises, players, goToNextPlayer, broadcastSync]
   );
@@ -976,8 +1022,12 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         // Direct standard sale
         completePlayerSale(current, finalBid.franchiseId, finalBid.amount, false);
       } else {
+        setAnnouncementOverlay({
+          type: "unsold",
+          player: current,
+        });
         soundEngine.playGavelHammerSound();
-        soundEngine.speakAnnouncement(`${current.name} marked unsold.`);
+        soundEngine.speakAnnouncement(`${current.name} remains unsold.`);
 
         const updatedPlayers = players.map((p, idx) => {
           if (idx === currentPlayerIndex) {
@@ -995,6 +1045,7 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         broadcastSync({ players: updatedPlayers, isTimerRunning: false, timerExpiresAt: null });
 
         setTimeout(() => {
+          setAnnouncementOverlay(null);
           goToNextPlayer();
         }, 3500);
       }
@@ -1296,11 +1347,14 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       soundEngine.playBidSound();
     }
 
-    // Reset or extend timer
+    // Timer expiration check: Do not allow expired bids
     const currentRemaining = timerExpiresAt ? Math.max(0, Math.ceil((timerExpiresAt - Date.now()) / 1000)) : timer;
-    const newTimerVal = currentRemaining <= settings.extensionTriggerSeconds
-      ? currentRemaining + settings.extensionSeconds
-      : settings.timerResetSeconds;
+    if (currentRemaining <= 0 && isTimerRunning) {
+      return { success: false, message: "Countdown timer has expired for this player. No late bids allowed." };
+    }
+
+    // Reset or extend timer: Reset to 10 seconds when a valid bid arrives during final 10 seconds
+    const newTimerVal = currentRemaining <= 10 ? 10 : Math.max(currentRemaining, 10);
     const newExpiresAt = Date.now() + newTimerVal * 1000;
 
     setTimer(newTimerVal);
@@ -2193,12 +2247,17 @@ export const AuctionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         handleTradeAction,
         updateSettings,
         toggleBotBidding,
-        botBiddingEnabled: settings.botBiddingEnabled !== false,
+        botBiddingEnabled: Boolean(settings.botBiddingEnabled),
         isCloudConnected,
         claimFranchise,
         releaseFranchise,
         messages,
         sendMessage,
+        deleteMessage,
+        announcementOverlay,
+        dismissAnnouncementOverlay,
+        themeMode,
+        toggleThemeMode,
         adminUser,
         signupAdmin,
         addNewPlayerDuringAuction,
